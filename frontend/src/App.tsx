@@ -33,7 +33,11 @@ function computeExpFit(data: ChartDataPoint[]) {
   const inf5 = n >= 5 ? (pts[n - 1].y - pts[n - 5].y) / pts[n - 5].y * 100 : 0;
   const preds: { season: string; hp: number }[] = [];
   for (let i = 1; i <= 3; i++) preds.push({ season: `Pred +${i}`, hp: A * Math.exp(B * (n + i)) });
-  return { A, B, formula: `y = ${A.toFixed(0)} · e^(${B.toFixed(4)}·x)`, r2, inf3, inf5, preds };
+  // Average per-season growth rate and doubling period
+  const firstHP = pts[0].y, lastHP = pts[n - 1].y;
+  const avgGrowthPct = firstHP > 0 ? (Math.pow(lastHP / firstHP, 1 / (n - 1)) - 1) * 100 : 0;
+  const doublingSeasons = avgGrowthPct > 0 ? Math.log(2) / Math.log(1 + avgGrowthPct / 100) : Infinity;
+  return { A, B, formula: `y = ${A.toFixed(0)} · e^(${B.toFixed(4)}·x)`, r2, inf3, inf5, preds, avgGrowthPct, doublingSeasons };
 }
 
 // ── Cool O Circle ──
@@ -386,6 +390,17 @@ function ChartPanel({ chartData, color, idx }: {
                 <td className="font-math font-bold text-amber-300/70 text-[15px]">{fmt(fit.preds[2].hp)} <span className="font-code text-[12px] text-amber-300/30">({fmtFull(fit.preds[2].hp)})</span></td>
                 <td></td><td></td>
               </tr>
+              <tr>
+                <td colSpan={4} className="text-center" style={{ borderTop: "1px solid rgba(125,211,252,0.08)" }}>
+                  <div style={{ padding: "14px 0 6px" }}>
+                    <span className="font-orb" style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem", letterSpacing: "0.08em", marginRight: "16px" }}>AVG SEASON GROWTH</span>
+                    <span className="font-orb font-bold" style={{ fontSize: "1.5rem", color: "#f87171", textShadow: "0 0 12px rgba(248,113,113,0.4)" }}>+{fit.avgGrowthPct.toFixed(2)}%</span>
+                    <span className="font-orb" style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem", letterSpacing: "0.08em", margin: "0 16px 0 28px" }}>DOUBLES EVERY</span>
+                    <span className="font-orb font-bold" style={{ fontSize: "1.5rem", color: "#f87171", textShadow: "0 0 12px rgba(248,113,113,0.4)" }}>{isFinite(fit.doublingSeasons) ? fit.doublingSeasons.toFixed(1) : "∞"}</span>
+                    <span className="font-orb" style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem", letterSpacing: "0.08em", marginLeft: "6px" }}>SEASONS</span>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -457,6 +472,17 @@ function AACharts({ chartData }: { chartData: ChartDataPoint[] }) {
                       <td className="font-math font-bold text-amber-300/70 text-[14px]">{fmt(fit.preds[0].hp)}</td>
                       <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>Pred +2</td>
                       <td className="font-math font-bold text-amber-300/70 text-[14px]">{fmt(fit.preds[1].hp)}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={4} className="text-center" style={{ borderTop: "1px solid rgba(125,211,252,0.08)" }}>
+                        <div style={{ padding: "12px 0 4px" }}>
+                          <span className="font-orb" style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.68rem", letterSpacing: "0.08em", marginRight: "14px" }}>AVG SEASON GROWTH</span>
+                          <span className="font-orb font-bold" style={{ fontSize: "1.3rem", color: "#f87171", textShadow: "0 0 12px rgba(248,113,113,0.4)" }}>+{fit.avgGrowthPct.toFixed(2)}%</span>
+                          <span className="font-orb" style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.68rem", letterSpacing: "0.08em", margin: "0 14px 0 24px" }}>DOUBLES EVERY</span>
+                          <span className="font-orb font-bold" style={{ fontSize: "1.3rem", color: "#f87171", textShadow: "0 0 12px rgba(248,113,113,0.4)" }}>{isFinite(fit.doublingSeasons) ? fit.doublingSeasons.toFixed(1) : "∞"}</span>
+                          <span className="font-orb" style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.68rem", letterSpacing: "0.08em", marginLeft: "6px" }}>SEASONS</span>
+                        </div>
+                      </td>
                     </tr>
                   </tbody>
                 </table>

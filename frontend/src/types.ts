@@ -71,14 +71,16 @@ export interface ComparisonEntry {
   category: string | null;
 }
 
-export interface LogFitResult {
-  a: number;       // coefficient A in y = A * e^(B*x)
-  b: number;       // exponent B
+export interface ExpFitResult {
+  A: number;
+  B: number;
   formula: string;
   r2: number;
-  recent_inflation_3: number;
-  recent_inflation_5: number;
-  predictions: { season: string; hp: number }[];
+  inf3: number;
+  inf5: number;
+  preds: { season: string; hp: number }[];
+  avgGrowthPct: number;
+  doublingSeasons: number;
 }
 
 export const MODE_COLORS: Record<string, string> = {
