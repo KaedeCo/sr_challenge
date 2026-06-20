@@ -4,8 +4,18 @@ from sqlalchemy.orm import DeclarativeBase, relationship, Session
 from datetime import datetime, timezone
 
 from config import DB_URL
+from sqlalchemy import event
 
 engine = create_engine(DB_URL, echo=False)
+
+
+@event.listens_for(engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    """Enable WAL mode for concurrent read/write support."""
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=5000")
+    cursor.close()
 
 
 class Base(DeclarativeBase):

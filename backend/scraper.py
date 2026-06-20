@@ -15,6 +15,8 @@ Only the highest-difficulty phase is scraped per mode:
 import json
 import re
 import time
+import fcntl
+import threading
 from math import floor
 
 import requests
@@ -30,6 +32,12 @@ AGENT_BROWSER = "agent-browser"
 REQUEST_DELAY = 0.3
 MONSTER_API = "https://www.huroka.com/api/monster"
 TEXTMAP_API = "https://www.huroka.com/api/textmap?lang={lang}&branch={branch}"
+
+# Thread-level lock (prevents concurrent runs within same process)
+_scrape_lock = threading.Lock()
+# File-level lock (prevents concurrent runs across different processes)
+_LOCK_FILE = "/tmp/sr_challenge_scraper.lock"
+_lock_fd = None
 
 
 # ── Text cleanup ─────────────────────────────────────────
@@ -476,7 +484,38 @@ def _scrape_seasonal(session, challenge_list, detail_url):
 
 
 def run_scraper():
-    """Prod for history + Beta ONLY for the single latest season per mode."""
+    """Prod for history + Beta ONLY for the single latest season per mode.
+    Uses thread lock + file lock to prevent concurrent runs."""
+    global _monster_lookup, _lock_fd
+
+    # 1. Thread-level lock (same process)
+    if not _scrape_lock.acquire(blocking=False):
+        print("[!] Another scraper is already running (thread), skipping.")
+        return False
+
+    # 2. File-level lock (cross-process)
+    _lock_fd = open(_LOCK_FILE, 'w')
+    try:
+        fcntl.flock(_lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except (IOError, OSError):
+        print("[!] Another scraper is already running (process), skipping.")
+        _lock_fd.close()
+        _lock_fd = None
+        _scrape_lock.release()
+        return False
+
+    try:
+        _run_scraper_impl()
+        return True
+    finally:
+        fcntl.flock(_lock_fd, fcntl.LOCK_UN)
+        _lock_fd.close()
+        _lock_fd = None
+        _scrape_lock.release()
+
+
+def _run_scraper_impl():
+    """Actual scraping logic."""
     global _monster_lookup
     # Reset monster name cache so new monsters from game updates are fetched
     _monster_lookup = None

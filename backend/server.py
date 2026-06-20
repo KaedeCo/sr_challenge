@@ -24,13 +24,17 @@ app.add_middleware(
 # ── Auto-scrape scheduler ──
 
 def auto_scrape():
-    """Run the scraper automatically."""
+    """Run the scraper automatically, then restart the service for a clean state."""
     print(f"[{datetime.now()}] Auto-scrape triggered")
     try:
         from scraper import run_scraper
-        # Use a fresh session
-        run_scraper()
-        print(f"[{datetime.now()}] Auto-scrape complete")
+        success = run_scraper()
+        if success:
+            print(f"[{datetime.now()}] Auto-scrape complete, restarting service...")
+            import os, signal
+            os.kill(os.getpid(), signal.SIGTERM)
+        else:
+            print(f"[{datetime.now()}] Auto-scrape skipped (already running)")
     except Exception as e:
         print(f"[{datetime.now()}] Auto-scrape failed: {e}")
 
