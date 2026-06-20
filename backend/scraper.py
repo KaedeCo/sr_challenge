@@ -401,34 +401,35 @@ def _load_textmaps():
 def _find_textmap_hash(en_text):
     """Given cleaned English text, find its Hash ID in the EN textmap.
     Uses exact match first, then template pattern match for entries with #N[i] placeholders.
-    Returns (hash_id, groups) where groups are captured values from template matching."""
+    Returns (hash_id, groups, placeholder_nums) where placeholder_nums lists
+    the actual #N[i] numbers in order of appearance."""
     if not en_text:
-        return None, None
+        return None, None, None
     en_map, _ = _load_textmaps()
     # Exact match
     for hash_id, val in en_map.items():
         clean = clean_text(val)
         if clean == en_text:
-            return hash_id, None
-    # Template match: convert keys with #N[i] to regex
+            return hash_id, None, None
+    # Template match: convert ANY #N[i] to regex
     for hash_id, val in en_map.items():
         clean = clean_text(val)
-        if "#1[i]" not in clean and "#2[i]" not in clean:
+        placeholder_nums = re.findall(r'#(\d+)\[i\]', clean)
+        if not placeholder_nums:
             continue
-        pattern = re.escape(clean)
-        pattern = pattern.replace(r"\#1\[i\]", r"(\S+)")
-        pattern = pattern.replace(r"\#2\[i\]", r"(\S+)")
-        pattern = pattern.replace(r"\#3\[i\]", r"(\S+)")
-        pattern = pattern.replace(r"\#4\[i\]", r"(\S+)")
+        escaped = re.escape(clean)
+        # Replace every \#N\[i\] (escaped) with a capture group
+        pattern = re.sub(r'\\#\d+\\\[i\\\]', r'(\\S+)', escaped)
         m = re.fullmatch(pattern, en_text)
         if m:
-            return hash_id, m.groups()
-    return None, None
+            return hash_id, m.groups(), placeholder_nums
+    return None, None, None
 
 
-def _translate_by_hash(hash_id, groups=None):
+def _translate_by_hash(hash_id, groups=None, placeholder_nums=None):
     """Get Chinese text for a Hash ID from the ZH textmap.
-    If groups (captured template values) provided, substitute them into the Chinese text."""
+    If groups (captured template values) provided, substitute them into
+    the Chinese text using the original #N[i] numbering."""
     if not hash_id:
         return ""
     _, zh_map = _load_textmaps()
@@ -436,9 +437,9 @@ def _translate_by_hash(hash_id, groups=None):
     if not raw:
         return ""
     result = clean_text(raw)
-    if groups:
-        for i, val in enumerate(groups, 1):
-            result = result.replace(f"#{i}[i]", val)
+    if groups and placeholder_nums:
+        for captured_val, ph_num in zip(groups, placeholder_nums):
+            result = result.replace(f"#{ph_num}[i]", captured_val)
     return result
 
 
@@ -446,8 +447,8 @@ def translate_text_by_hash(en_text):
     """Translate English text to Chinese using textmap Hash ID lookup."""
     if not en_text:
         return ""
-    hash_id, groups = _find_textmap_hash(en_text)
-    return _translate_by_hash(hash_id, groups) if hash_id else ""
+    hash_id, groups, ph_nums = _find_textmap_hash(en_text)
+    return _translate_by_hash(hash_id, groups, ph_nums) if hash_id else ""
 
 
 # ── Main scraping entry ──────────────────────────────────
