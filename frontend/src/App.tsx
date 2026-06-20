@@ -592,7 +592,7 @@ export default function App() {
   const [gaugeIdx, setGaugeIdx] = useState(0);
   const [detail, setDetail] = useState<SeasonDetail | null>(null);
   const [compare, setCompare] = useState<ComparisonEntry[]>([]);
-  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem("sr-lang") as Lang) || "en");
+  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem("sr-lang") as Lang) || "zh");
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const color = MODE_COLORS[activeMode] || "#7dd3fc";
   const isAA = activeMode === "anomaly_arbitration";
