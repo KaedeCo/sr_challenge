@@ -79,8 +79,7 @@ export interface ExpFitResult {
   inf3: number;
   inf5: number;
   preds: { season: string; hp: number }[];
-  avgGrowthPct: number;
-  doublingSeasons: number;
+  growthWindows: { label: string; avgPct: number; doubling: number }[];
 }
 
 export const MODE_COLORS: Record<string, string> = {
