@@ -669,10 +669,12 @@ export default function App() {
                   <span className="font-code text-[13px] text-white/35 bg-white/[0.04] px-3 py-1.5 rounded">{detail.levels.length} {t("nodes")}</span>
                 </div>
                 {(() => {
+                  const buffName = detail.season_buffs?.[0]?.name || detail.levels?.[0]?.buff_name;
                   const buffDesc = detail.season_buffs?.[0]?.desc || detail.levels?.[0]?.buff_desc;
                   return buffDesc ? (
-                    <div className="mt-auto p-4 rounded-lg bg-white/[0.03] border border-white/[0.04] font-orb text-[14px] text-white/40 leading-relaxed text-center tracking-wide" style={{ textShadow: "0 0 8px rgba(125,211,252,0.08)" }}>
-                      {tr(buffDesc)}
+                    <div className="mt-auto p-4 rounded-lg bg-white/[0.03] border border-white/[0.04] font-orb text-center tracking-wide" style={{ textShadow: "0 0 8px rgba(125,211,252,0.08)" }}>
+                      {buffName && <div className="font-orb font-bold text-[15px] text-sky-300/60 mb-2" style={{ textShadow: "0 0 6px rgba(125,211,252,0.2)" }}>{tr(buffName)}</div>}
+                      <div className="text-[14px] text-white/40 leading-relaxed">{tr(buffDesc)}</div>
                     </div>
                   ) : null;
                 })()}
