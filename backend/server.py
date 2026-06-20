@@ -97,7 +97,7 @@ def get_seasons(mode_key: str):
                 "is_beta": g.is_beta,
                 "level_count": g.level_count,
                 "season_buffs": json.loads(g.season_buffs) if g.season_buffs else [],
-                "season_buffs_zh": json.loads(group.season_buffs_zh) if group.season_buffs_zh else [],
+                "season_buffs_zh": json.loads(g.season_buffs_zh) if g.season_buffs_zh else [],
             }
             for g in groups
         ]
