@@ -25,6 +25,12 @@ const UI_TEXT = {
     aaBreakdown: "Anomaly Arbitration · HP Breakdown",
     analysis: "Analysis",
     switchLang: "中文",
+    metric: "Metric",
+    value: "Value",
+    r2: "R²",
+    pred1: "Pred +1",
+    pred2: "Pred +2",
+    pred3: "Pred +3",
   },
   zh: {
     seasonDial: "赛季表盘 · 拖动导航",
@@ -33,8 +39,8 @@ const UI_TEXT = {
     currentSeason: "当前赛季",
     totalHP: "总血量",
     formula: "公式",
-    inflation3: "近3期膨胀",
-    inflation5: "近5期膨胀",
+    inflation3: "近3期膨胀率",
+    inflation5: "近5期膨胀率",
     collapse: "收起",
     enemies: "个敌人",
     wave: "波次",
@@ -44,6 +50,12 @@ const UI_TEXT = {
     aaBreakdown: "异相仲裁 · 血量分解",
     analysis: "分析",
     switchLang: "EN",
+    metric: "指标",
+    value: "数值",
+    r2: "决定系数 R²",
+    pred1: "接下来1期",
+    pred2: "接下来2期",
+    pred3: "接下来3期",
   },
 };
 
@@ -177,7 +189,7 @@ function Sidebar({ modes, active, onMode, seasons, selIdx, onSeason, color }: {
     <>
       <div className="sidebar-fixed">
         <div className="sidebar-header">
-          <div className="sidebar-title">{lang === "zh" ? "星铁挑战" : "SR Challenge"}</div>
+          <div className="sidebar-title">SR Challenge</div>
           <div className="sidebar-subtitle">— We just define some C<CoolO />L things. —</div>
         </div>
         <div className="sidebar-tabs">
@@ -459,29 +471,29 @@ function ChartPanel({ chartData, color, idx }: {
           </div>
           <table className="data-table w-full">
             <thead>
-              <tr><th>Metric</th><th>Value</th><th>Metric</th><th>Value</th></tr>
+              <tr><th>{t("metric")}</th><th>{t("value")}</th><th>{t("metric")}</th><th>{t("value")}</th></tr>
             </thead>
             <tbody>
               <tr>
-                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>Formula</td>
+                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("formula")}</td>
                 <td className="font-math font-bold text-amber-300/85 text-[15px]">{fit.formula}</td>
-                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>R²</td>
+                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("r2")}</td>
                 <td className="font-math text-white/70 text-[15px]">{fit.r2.toFixed(4)}</td>
               </tr>
               <tr>
-                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>3-Season Inflation</td>
+                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("inflation3")}</td>
                 <td className="font-orb font-bold text-[20px]" style={{ color: fit.inf3 > 0 ? "#f87171" : "#4ade80", textShadow: fit.inf3 > 0 ? "0 0 10px rgba(248,113,113,0.4)" : "0 0 10px rgba(74,222,128,0.3)" }}>{(fit.inf3 >= 0 ? "+" : "") + fit.inf3.toFixed(1)}%</td>
-                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>5-Season Inflation</td>
+                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("inflation5")}</td>
                 <td className="font-orb font-bold text-[20px]" style={{ color: fit.inf5 > 0 ? "#f87171" : "#4ade80", textShadow: fit.inf5 > 0 ? "0 0 10px rgba(248,113,113,0.4)" : "0 0 10px rgba(74,222,128,0.3)" }}>{(fit.inf5 >= 0 ? "+" : "") + fit.inf5.toFixed(1)}%</td>
               </tr>
               <tr>
-                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>Pred +1</td>
+                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("pred1")}</td>
                 <td className="font-math font-bold text-amber-300/70 text-[15px]">{fmt(fit.preds[0].hp)} <span className="font-code text-[12px] text-amber-300/30">({fmtFull(fit.preds[0].hp)})</span></td>
-                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>Pred +2</td>
+                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("pred2")}</td>
                 <td className="font-math font-bold text-amber-300/70 text-[15px]">{fmt(fit.preds[1].hp)} <span className="font-code text-[12px] text-amber-300/30">({fmtFull(fit.preds[1].hp)})</span></td>
               </tr>
               <tr>
-                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>Pred +3</td>
+                <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("pred3")}</td>
                 <td className="font-math font-bold text-amber-300/70 text-[15px]">{fmt(fit.preds[2].hp)} <span className="font-code text-[12px] text-amber-300/30">({fmtFull(fit.preds[2].hp)})</span></td>
                 <td></td><td></td>
               </tr>
@@ -539,24 +551,24 @@ function AACharts({ chartData }: { chartData: ChartDataPoint[] }) {
               <div className="analysis-card">
                 <div className="font-orb px-5 py-3 border-b border-white/5 text-center" style={{ fontSize: "0.85rem", fontWeight: 600, letterSpacing: "0.12em", color: "rgba(125,211,252,0.6)", textTransform: "uppercase" }}>{tr(l)} · {t("analysis")}</div>
                 <table className="data-table w-full">
-                  <thead><tr><th>Metric</th><th>Value</th><th>Metric</th><th>Value</th></tr></thead>
+                  <thead><tr><th>{t("metric")}</th><th>{t("value")}</th><th>{t("metric")}</th><th>{t("value")}</th></tr></thead>
                   <tbody>
                     <tr>
-                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>Formula</td>
+                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("formula")}</td>
                       <td className="font-math font-bold text-amber-300/85 text-[14px]">{fit.formula}</td>
-                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>R²</td>
+                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("r2")}</td>
                       <td className="font-math text-white/70 text-[14px]">{fit.r2.toFixed(4)}</td>
                     </tr>
                     <tr>
-                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>3-Season Inflation</td>
+                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("inflation3")}</td>
                       <td className="font-orb font-bold text-[18px]" style={{ color: fit.inf3 > 0 ? "#f87171" : "#4ade80", textShadow: fit.inf3 > 0 ? "0 0 10px rgba(248,113,113,0.4)" : "0 0 10px rgba(74,222,128,0.3)" }}>{(fit.inf3 >= 0 ? "+" : "") + fit.inf3.toFixed(1)}%</td>
-                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>5-Season Inflation</td>
+                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("inflation5")}</td>
                       <td className="font-orb font-bold text-[18px]" style={{ color: fit.inf5 > 0 ? "#f87171" : "#4ade80", textShadow: fit.inf5 > 0 ? "0 0 10px rgba(248,113,113,0.4)" : "0 0 10px rgba(74,222,128,0.3)" }}>{(fit.inf5 >= 0 ? "+" : "") + fit.inf5.toFixed(1)}%</td>
                     </tr>
                     <tr>
-                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>Pred +1</td>
+                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("pred1")}</td>
                       <td className="font-math font-bold text-amber-300/70 text-[14px]">{fmt(fit.preds[0].hp)}</td>
-                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>Pred +2</td>
+                      <td className="font-orb" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>{t("pred2")}</td>
                       <td className="font-math font-bold text-amber-300/70 text-[14px]">{fmt(fit.preds[1].hp)}</td>
                     </tr>
                     <GrowthRows windows={fit.growthWindows} fontSize="1.2rem" />
@@ -634,7 +646,7 @@ export default function App() {
         {/* Title */}
         <header className="text-center pt-10 pb-6">
           <h1 className="sidebar-title" style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)" }}>
-            {lang === "zh" ? "星铁挑战数据" : "SR Challenge Stats"}
+            SR Challenge Stats
           </h1>
           <p className="font-mono mt-2 text-[clamp(0.65rem,1.2vw,0.8rem)] text-white/25 italic">
             — We just define some COOOOOL things. —
