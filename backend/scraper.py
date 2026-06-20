@@ -400,15 +400,16 @@ def _load_textmaps():
 
 def _find_textmap_hash(en_text):
     """Given cleaned English text, find its Hash ID in the EN textmap.
-    Uses exact match first, then template pattern match for entries with #N[i] placeholders."""
+    Uses exact match first, then template pattern match for entries with #N[i] placeholders.
+    Returns (hash_id, groups) where groups are captured values from template matching."""
     if not en_text:
-        return None
+        return None, None
     en_map, _ = _load_textmaps()
     # Exact match
     for hash_id, val in en_map.items():
         clean = clean_text(val)
         if clean == en_text:
-            return hash_id
+            return hash_id, None
     # Template match: convert keys with #N[i] to regex
     for hash_id, val in en_map.items():
         clean = clean_text(val)
@@ -419,26 +420,34 @@ def _find_textmap_hash(en_text):
         pattern = pattern.replace(r"\#2\[i\]", r"(\S+)")
         pattern = pattern.replace(r"\#3\[i\]", r"(\S+)")
         pattern = pattern.replace(r"\#4\[i\]", r"(\S+)")
-        if re.fullmatch(pattern, en_text):
-            return hash_id
-    return None
+        m = re.fullmatch(pattern, en_text)
+        if m:
+            return hash_id, m.groups()
+    return None, None
 
 
-def _translate_by_hash(hash_id):
-    """Get Chinese text for a Hash ID from the ZH textmap."""
+def _translate_by_hash(hash_id, groups=None):
+    """Get Chinese text for a Hash ID from the ZH textmap.
+    If groups (captured template values) provided, substitute them into the Chinese text."""
     if not hash_id:
         return ""
     _, zh_map = _load_textmaps()
     raw = zh_map.get(hash_id, "")
-    return clean_text(raw) if raw else ""
+    if not raw:
+        return ""
+    result = clean_text(raw)
+    if groups:
+        for i, val in enumerate(groups, 1):
+            result = result.replace(f"#{i}[i]", val)
+    return result
 
 
 def translate_text_by_hash(en_text):
     """Translate English text to Chinese using textmap Hash ID lookup."""
     if not en_text:
         return ""
-    hash_id = _find_textmap_hash(en_text)
-    return _translate_by_hash(hash_id) if hash_id else ""
+    hash_id, groups = _find_textmap_hash(en_text)
+    return _translate_by_hash(hash_id, groups) if hash_id else ""
 
 
 # ── Main scraping entry ──────────────────────────────────
