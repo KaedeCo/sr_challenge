@@ -226,7 +226,7 @@ function EnemyRow({ name, level, hp, spd, tough, effRes, qty, changePct }: {
   return (
     <div className="enemy-row flex items-center gap-3 px-4 py-2 text-[15px] border-b border-white/[0.04] last:border-0">
       <span className="flex-1 min-w-0 truncate text-sky-200/85 text-[14px]">{name}</span>
-      <span className="w-16 text-right text-white/25 font-code text-[13px]">Lv.{level}</span>
+      <span className="w-16 text-right text-amber-400 font-code text-[13px]" style={{ textShadow: "0 0 6px rgba(250,204,21,0.3)" }}>Lv.{level}</span>
       <span className="w-36 text-right text-amber-300/75 font-math text-[15px]">{fmt(hp)}{qty > 1 ? ` x${qty}` : ""}</span>
       <span className="w-20 text-right text-white/20 font-code text-[13px]">{spd}</span>
       <span className="w-24 text-right text-white/20 font-code text-[13px]">{tough}</span>

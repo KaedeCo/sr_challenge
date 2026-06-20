@@ -4,12 +4,14 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  base: "/sr/sr-challenge/",
   server: {
     port: 5173,
     proxy: {
-      "/api": {
+      "/sr/sr-challenge/api": {
         target: "http://localhost:8765",
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/sr\/sr-challenge\/api/, "/api"),
       },
     },
   },

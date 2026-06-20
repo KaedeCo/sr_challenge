@@ -1,0 +1,15 @@
+[Unit]
+Description=SR Challenge Stats Backend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/sr-challenge/backend
+ExecStart=/usr/bin/python3 /opt/sr-challenge/backend/server.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

@@ -295,7 +295,9 @@ def store_challenge(session, group_data, levels_data, enemies_data):
                              and e.get("is_starward", False) == lv.get("is_starward", False)]
         for en in level_enemies:
             en["maze_level_id"] = maze_level.id
-            clean_en = {k: v for k, v in en.items() if k in Enemy.__table__.columns}
+            # Use ORM mapper attribute names for filtering
+            valid_attrs = set(Enemy.__mapper__.columns.keys())
+            clean_en = {k: v for k, v in en.items() if k in valid_attrs}
             enemy = Enemy(**clean_en)
             session.add(enemy)
 

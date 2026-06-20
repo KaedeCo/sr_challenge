@@ -1,6 +1,7 @@
 import type { ModeInfo, SeasonSummary, SeasonDetail, ChartDataPoint, ComparisonEntry } from "./types";
 
-const BASE = "/api";
+// Use relative path so it works both in dev (proxy) and prod (nginx)
+const BASE = import.meta.env.BASE_URL + "api";
 
 async function fetchJSON<T>(url: string): Promise<T> {
   const res = await fetch(url);
