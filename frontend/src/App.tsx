@@ -602,6 +602,26 @@ export default function App() {
     return translations[text] || text;
   }, [lang, translations]);
 
+  // Deep translation for long text (buff descriptions): replace known substrings
+  const trDesc = useRef<Map<string, string>>(new Map());
+  const translateDesc = useCallback((text: string) => {
+    if (lang === "en" || !text) return text;
+    // Try exact match first
+    if (translations[text]) return translations[text];
+    // Check cache
+    const cache = trDesc.current;
+    if (cache.has(text)) return cache.get(text)!;
+    // Build substring replacements: replace English phrases in the text with Chinese
+    let result = text;
+    for (const [en, zh] of Object.entries(translations)) {
+      if (en.length >= 4 && result.includes(en)) {
+        result = result.replaceAll(en, zh);
+      }
+    }
+    cache.set(text, result);
+    return result;
+  }, [lang, translations]);
+
   const t = useCallback((key: keyof typeof UI_TEXT["en"]) => UI_TEXT[lang][key] || UI_TEXT.en[key], [lang]);
 
   useEffect(() => { getModes().then(setModes); }, []);
@@ -674,7 +694,7 @@ export default function App() {
                   return buffDesc ? (
                     <div className="mt-auto p-4 rounded-lg bg-white/[0.03] border border-white/[0.04] font-orb text-center tracking-wide" style={{ textShadow: "0 0 8px rgba(125,211,252,0.08)" }}>
                       {buffName && <div className="font-orb font-bold text-[15px] text-sky-300/60 mb-2" style={{ textShadow: "0 0 6px rgba(125,211,252,0.2)" }}>{tr(buffName)}</div>}
-                      <div className="text-[14px] text-white/40 leading-relaxed">{tr(buffDesc)}</div>
+                      <div className="text-[14px] text-white/40 leading-relaxed">{translateDesc(buffDesc)}</div>
                     </div>
                   ) : null;
                 })()}
