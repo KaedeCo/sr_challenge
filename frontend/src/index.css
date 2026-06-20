@@ -287,3 +287,28 @@ body::before {
 .font-mono { font-family: 'Space Mono', monospace !important; }
 .font-math { font-family: 'Cambria Math', serif !important; }
 .font-code { font-family: 'Cascadia Code', 'Consolas', monospace !important; }
+
+/* ── Language toggle button ── */
+.lang-toggle {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 100;
+  padding: 8px 18px;
+  border-radius: 99px;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  background: rgba(8, 8, 26, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #7dd3fc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.lang-toggle:hover {
+  border-color: rgba(125, 211, 252, 0.5);
+  box-shadow: 0 0 16px rgba(125, 211, 252, 0.15);
+  transform: translateY(-1px);
+}

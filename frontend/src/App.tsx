@@ -1,8 +1,51 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 import type { ModeInfo, SeasonSummary, SeasonDetail, ChartDataPoint, ComparisonEntry, LevelDetail } from "./types";
 import { MODE_COLORS, MODE_NAMES } from "./types";
-import { getModes, getSeasons, getSeasonDetail, getChartData, getComparison } from "./api";
+import { getModes, getSeasons, getSeasonDetail, getChartData, getComparison, getTranslations } from "./api";
+
+// ── i18n ──
+type Lang = "en" | "zh";
+const UI_TEXT = {
+  en: {
+    seasonDial: "Season Dial · Drag to Navigate",
+    totalHPTrend: "Total HP · Exponential Trend",
+    predictiveAnalysis: "Predictive Analysis",
+    currentSeason: "Current Season",
+    totalHP: "Total HP",
+    formula: "Formula",
+    inflation3: "3-Season Inflation",
+    inflation5: "5-Season Inflation",
+    collapse: "Collapse",
+    enemies: "enemies",
+    wave: "WAVE",
+    nodes: "Nodes",
+    selectSeason: "Select a season",
+    noData: "No data",
+    aaBreakdown: "Anomaly Arbitration · HP Breakdown",
+    analysis: "Analysis",
+    switchLang: "中文",
+  },
+  zh: {
+    seasonDial: "赛季表盘 · 拖动导航",
+    totalHPTrend: "总血量 · 指数趋势",
+    predictiveAnalysis: "预测分析",
+    currentSeason: "当前赛季",
+    totalHP: "总血量",
+    formula: "公式",
+    inflation3: "近3期膨胀",
+    inflation5: "近5期膨胀",
+    collapse: "收起",
+    enemies: "个敌人",
+    wave: "波次",
+    nodes: "节点",
+    selectSeason: "选择一个赛季",
+    noData: "无数据",
+    aaBreakdown: "异相仲裁 · 血量分解",
+    analysis: "分析",
+    switchLang: "EN",
+  },
+};
 
 // ── Formatters ──
 function fmt(n: number): string {
@@ -14,7 +57,15 @@ function fmtFull(n: number): string {
   return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
-// ── Growth Windows renderer ──
+// ── i18n Context ──
+const I18nContext = React.createContext<{
+  lang: Lang;
+  t: (key: keyof typeof UI_TEXT["en"]) => string;
+  tr: (text: string) => string;
+}>({ lang: "en", t: (k) => UI_TEXT.en[k], tr: (t) => t });
+const useI18n = () => React.useContext(I18nContext);
+
+
 function GrowthRows({ windows, fontSize }: { windows: { label: string; avgPct: number; doubling: number }[]; fontSize: string }) {
   return (
     <>
@@ -121,11 +172,12 @@ function Sidebar({ modes, active, onMode, seasons, selIdx, onSeason, color }: {
     setTooltip(null);
   };
 
+  const { lang, tr } = useI18n();
   return (
     <>
       <div className="sidebar-fixed">
         <div className="sidebar-header">
-          <div className="sidebar-title">SR Challenge</div>
+          <div className="sidebar-title">{lang === "zh" ? "星铁挑战" : "SR Challenge"}</div>
           <div className="sidebar-subtitle">— We just define some C<CoolO />L things. —</div>
         </div>
         <div className="sidebar-tabs">
@@ -136,7 +188,7 @@ function Sidebar({ modes, active, onMode, seasons, selIdx, onSeason, color }: {
               <button key={m.key} onClick={() => onMode(m.key)}
                 className="clip-tab w-full text-left"
                 style={{ background: isA ? `${c}1a` : "rgba(255,255,255,0.03)", color: isA ? c : "#8894a8" }}>
-                {m.name_en}
+                {lang === "zh" ? MODE_NAMES[m.key]?.zh || m.name_en : m.name_en}
               </button>
             );
           })}
@@ -153,7 +205,7 @@ function Sidebar({ modes, active, onMode, seasons, selIdx, onSeason, color }: {
                 onMouseLeave={handleMouseLeave}
                 className={`season-list-item ${isA ? "active" : ""}`}
                 style={isA ? { borderLeftColor: color, color } : {}}>
-                {seasons.length - i}. {s.name}
+                {seasons.length - i}. {tr(s.name)}
               </div>
             );
           })}
@@ -209,7 +261,7 @@ function Gauge({ total, idx, onChange, color }: {
   return (
     <div className="gauge-card p-5 select-none" onMouseDown={handleMove} onTouchStart={handleMove}>
       <div className="font-orb text-center mb-2" style={{ fontSize: "0.85rem", fontWeight: 600, letterSpacing: "0.12em", color: "rgba(125,211,252,0.55)", textTransform: "uppercase", textShadow: "0 0 10px rgba(125,211,252,0.15)" }}>
-        Season Dial · Drag to Navigate
+        {useI18n().t("seasonDial")}
       </div>
       <svg ref={svgRef} viewBox="0 0 600 270" className="w-full" style={{ cursor: "pointer" }}>
         <defs>
@@ -286,22 +338,23 @@ function EnemyRow({ name, level, hp, spd, tough, effRes, qty, changePct }: {
 // ── Node Card ──
 function NodeCard({ level, compare }: { level: LevelDetail; compare: ComparisonEntry[] }) {
   const [on, setOn] = useState(true);
+  const { t, tr } = useI18n();
   const waves = new Map<number, typeof level.enemies>();
   level.enemies.forEach(e => { const l = waves.get(e.wave_num) || []; l.push(e); waves.set(e.wave_num, l); });
   return (
     <div className={`glass-card p-5 ${level.is_starward ? "border-purple-500/15" : ""}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <h4 className="font-orb font-semibold text-[17px]" style={{ letterSpacing: "0.04em" }}>{level.name}</h4>
+          <h4 className="font-orb font-semibold text-[17px]" style={{ letterSpacing: "0.04em" }}>{tr(level.name)}</h4>
           {level.is_starward && <span className="font-orb text-[11px] px-2 py-0.5 rounded bg-purple-500/12 text-purple-300">SW</span>}
         </div>
         <span className="font-math text-[14px] text-sky-300/55">HP {fmt(level.total_hp)}</span>
       </div>
-      <button onClick={() => setOn(!on)} className="font-orb text-[13px] text-sky-400/55 hover:text-sky-300">{on ? "▼ Collapse" : `▶ ${level.enemies.length} enemies`}</button>
+      <button onClick={() => setOn(!on)} className="font-orb text-[13px] text-sky-400/55 hover:text-sky-300">{on ? `▼ ${t("collapse")}` : `▶ ${level.enemies.length} ${t("enemies")}`}</button>
       {on && <div className="mt-2">{Array.from(waves.entries()).sort(([a],[b])=>a-b).map(([wn,ens])=>(
         <div key={wn} className="mb-2">
-          <div className="font-orb text-[12px] text-white/20 px-4 mb-1">WAVE {wn}</div>
-          {ens.map((e,i)=>{const cmp=compare.find(c=>c.monster_name===e.name&&c.category===level.category);return <EnemyRow key={i} name={e.name} level={e.level} hp={e.hp} spd={e.speed} tough={e.toughness} effRes={e.effect_res} qty={e.quantity} changePct={cmp?.hp_change_pct??null}/>;})}
+          <div className="font-orb text-[12px] text-white/20 px-4 mb-1">{t("wave")} {wn}</div>
+          {ens.map((e,i)=>{const cmp=compare.find(c=>c.monster_name===e.name&&c.category===level.category);return <EnemyRow key={i} name={tr(e.name)} level={e.level} hp={e.hp} spd={e.speed} tough={e.toughness} effRes={e.effect_res} qty={e.quantity} changePct={cmp?.hp_change_pct??null}/>;})}
         </div>
       ))}</div>}
     </div>
@@ -310,14 +363,15 @@ function NodeCard({ level, compare }: { level: LevelDetail; compare: ComparisonE
 
 // ── Display Screen ──
 function DisplayScreen({ name, hp }: { name: string; hp: number }) {
+  const { t, tr } = useI18n();
   return (
     <div className="display-screen p-5 flex justify-between items-center">
       <div>
-        <div className="font-orb text-[12px] text-emerald-400/50 tracking-[0.1em] uppercase mb-1">Current Season</div>
-        <div className="font-orb text-[18px] tracking-wider text-white/90">{name}</div>
+        <div className="font-orb text-[12px] text-emerald-400/50 tracking-[0.1em] uppercase mb-1">{t("currentSeason")}</div>
+        <div className="font-orb text-[18px] tracking-wider text-white/90">{tr(name)}</div>
       </div>
       <div className="text-right">
-        <div className="font-orb text-[12px] text-emerald-400/50 tracking-[0.1em] uppercase mb-1">Total HP</div>
+        <div className="font-orb text-[12px] text-emerald-400/50 tracking-[0.1em] uppercase mb-1">{t("totalHP")}</div>
         <div className="flex items-baseline justify-end gap-2">
           <span className="font-orb text-[30px] font-bold text-emerald-300 tracking-wider" style={{ textShadow: "0 0 12px rgba(74,222,128,0.4)" }}>{fmt(hp)}</span>
           <span className="font-orb text-[14px] text-emerald-400/50">({fmtFull(hp)})</span>
@@ -331,12 +385,13 @@ function DisplayScreen({ name, hp }: { name: string; hp: number }) {
 function ChartPanel({ chartData, color, idx }: {
   chartData: ChartDataPoint[]; color: string; idx: number;
 }) {
+  const { t, tr } = useI18n();
   const fit = computeExpFit(chartData);
-  if (chartData.length < 1) return <div className="glass-card p-12 text-center text-white/15 font-orb">No data</div>;
+  if (chartData.length < 1) return <div className="glass-card p-12 text-center text-white/15 font-orb">{t("noData")}</div>;
 
   // Combined data: actual + prediction with null gap
   const combined: any[] = chartData.map((d, i) => ({
-    season_name: d.season_name,
+    season_name: tr(d.season_name),
     actual: d.total_hp,
     fit: fit ? fit.A * Math.exp(fit.B * (i + 1)) : null,
     pred: null,
@@ -369,7 +424,7 @@ function ChartPanel({ chartData, color, idx }: {
   return (
     <div className="space-y-5">
       <div className="font-orb text-center" style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "0.12em", color: "rgba(125,211,252,0.8)", textTransform: "uppercase", textShadow: "0 0 12px rgba(125,211,252,0.25)" }}>
-        Total HP · Exponential Trend
+        {useI18n().t("totalHPTrend")}
       </div>
       <div className="glass-card p-5">
         <ResponsiveContainer width="100%" height={360}>
@@ -400,7 +455,7 @@ function ChartPanel({ chartData, color, idx }: {
       {fit && (
         <div className="analysis-card">
           <div className="font-orb px-5 py-4 border-b border-white/5 text-center" style={{ fontSize: "1rem", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(125,211,252,0.7)", textTransform: "uppercase", textShadow: "0 0 10px rgba(125,211,252,0.15)" }}>
-            Predictive Analysis
+            {t("predictiveAnalysis")}
           </div>
           <table className="data-table w-full">
             <thead>
@@ -441,7 +496,8 @@ function ChartPanel({ chartData, color, idx }: {
 
 // ── AA Charts with individual exp fit ──
 function AACharts({ chartData }: { chartData: ChartDataPoint[] }) {
-  if (chartData.length < 1) return <div className="glass-card p-12 text-center text-white/15 font-orb text-[16px]">No data</div>;
+  const { t, tr } = useI18n();
+  if (chartData.length < 1) return <div className="glass-card p-12 text-center text-white/15 font-orb text-[16px]">{t("noData")}</div>;
   const series = [
     { k: "knights_hp" as const, l: "Knights I+II+III", c: "#4ade80" },
     { k: "kic_hp" as const, l: "King in Check", c: "#facc15" },
@@ -450,13 +506,13 @@ function AACharts({ chartData }: { chartData: ChartDataPoint[] }) {
   return (
     <div className="space-y-6">
       <div className="font-orb text-center" style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "0.12em", color: "rgba(125,211,252,0.8)", textTransform: "uppercase", textShadow: "0 0 12px rgba(125,211,252,0.25)" }}>
-        Anomaly Arbitration · HP Breakdown
+        {t("aaBreakdown")}
       </div>
       {series.map(({ k, l, c }) => {
         // Convert AA data to ChartDataPoint format for fit
         const fitData: ChartDataPoint[] = chartData.map(d => ({ ...d, total_hp: (d[k] as number) || 0 }));
         const fit = computeExpFit(fitData);
-        const combined: any[] = fitData.map((d, i) => ({ season_name: d.season_name, actual: d.total_hp, fit: fit ? fit.A * Math.exp(fit.B * (i + 1)) : null, pred: null }));
+        const combined: any[] = fitData.map((d, i) => ({ season_name: tr(d.season_name), actual: d.total_hp, fit: fit ? fit.A * Math.exp(fit.B * (i + 1)) : null, pred: null }));
         if (fit && fitData.length > 0) {
           const last = fitData[fitData.length - 1];
           combined.push({ season_name: last.season_name, actual: null, fit: null, pred: last.total_hp });
@@ -481,7 +537,7 @@ function AACharts({ chartData }: { chartData: ChartDataPoint[] }) {
             </div>
             {fit && (
               <div className="analysis-card">
-                <div className="font-orb px-5 py-3 border-b border-white/5 text-center" style={{ fontSize: "0.85rem", fontWeight: 600, letterSpacing: "0.12em", color: "rgba(125,211,252,0.6)", textTransform: "uppercase" }}>{l} · Analysis</div>
+                <div className="font-orb px-5 py-3 border-b border-white/5 text-center" style={{ fontSize: "0.85rem", fontWeight: 600, letterSpacing: "0.12em", color: "rgba(125,211,252,0.6)", textTransform: "uppercase" }}>{tr(l)} · {t("analysis")}</div>
                 <table className="data-table w-full">
                   <thead><tr><th>Metric</th><th>Value</th><th>Metric</th><th>Value</th></tr></thead>
                   <tbody>
@@ -524,14 +580,30 @@ export default function App() {
   const [gaugeIdx, setGaugeIdx] = useState(0);
   const [detail, setDetail] = useState<SeasonDetail | null>(null);
   const [compare, setCompare] = useState<ComparisonEntry[]>([]);
+  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem("sr-lang") as Lang) || "en");
+  const [translations, setTranslations] = useState<Record<string, string>>({});
   const color = MODE_COLORS[activeMode] || "#7dd3fc";
   const isAA = activeMode === "anomaly_arbitration";
 
+  const tr = useCallback((text: string) => {
+    if (lang === "en" || !text) return text;
+    return translations[text] || text;
+  }, [lang, translations]);
+
+  const t = useCallback((key: keyof typeof UI_TEXT["en"]) => UI_TEXT[lang][key] || UI_TEXT.en[key], [lang]);
+
   useEffect(() => { getModes().then(setModes); }, []);
+  useEffect(() => { getTranslations().then(setTranslations).catch(() => {}); }, []);
   useEffect(() => {
     setDetail(null); setCompare([]); setGaugeIdx(0);
     Promise.all([getSeasons(activeMode), getChartData(activeMode)]).then(([s, c]) => { setSeasons(s); setChartData(c); setGaugeIdx(s.length - 1); });
   }, [activeMode]);
+
+  const toggleLang = () => {
+    const newLang = lang === "en" ? "zh" : "en";
+    setLang(newLang);
+    localStorage.setItem("sr-lang", newLang);
+  };
 
   const loadSeason = async (idx: number) => {
     setGaugeIdx(idx);
@@ -550,14 +622,19 @@ export default function App() {
   }, [seasons]);
 
   return (
+    <I18nContext.Provider value={{ lang, t, tr }}>
     <div className="app-container">
       <Sidebar modes={modes} active={activeMode} onMode={setActiveMode}
         seasons={seasons} selIdx={gaugeIdx} onSeason={loadSeason} color={color} />
       <main className="main-content">
+        {/* Language toggle */}
+        <button onClick={toggleLang} className="lang-toggle font-orb" title="Switch Language">
+          {t("switchLang")}
+        </button>
         {/* Title */}
         <header className="text-center pt-10 pb-6">
           <h1 className="sidebar-title" style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)" }}>
-            SR Challenge Stats
+            {lang === "zh" ? "星铁挑战数据" : "SR Challenge Stats"}
           </h1>
           <p className="font-mono mt-2 text-[clamp(0.65rem,1.2vw,0.8rem)] text-white/25 italic">
             — We just define some COOOOOL things. —
@@ -572,18 +649,18 @@ export default function App() {
             {detail && (
               <div className="mt-4 glass-card p-6 flex flex-col justify-center min-h-[180px]">
                 <div className="flex items-center gap-3 flex-wrap mb-3">
-                  <h3 className="font-orb font-bold text-xl" style={{ letterSpacing: "0.06em" }}>{detail.name}</h3>
-                  {detail.has_starward && <span className="font-orb text-[11px] px-2.5 py-1 rounded bg-purple-500/15 text-purple-300 tracking-wider">STARWARD</span>}
+                  <h3 className="font-orb font-bold text-xl" style={{ letterSpacing: "0.06em" }}>{tr(detail.name)}</h3>
+                  {detail.has_starward && <span className="font-orb text-[11px] px-2.5 py-1 rounded bg-purple-500/15 text-purple-300 tracking-wider">{lang === "zh" ? "星启" : "STARWARD"}</span>}
                 </div>
                 <div className="flex gap-3 mt-1 flex-wrap mb-4">
                   <span className="font-code text-[13px] text-white/35 bg-white/[0.04] px-3 py-1.5 rounded font-math">HP {fmt(detail.total_hp_all)}</span>
-                  <span className="font-code text-[13px] text-white/35 bg-white/[0.04] px-3 py-1.5 rounded">{detail.levels.length} Nodes</span>
+                  <span className="font-code text-[13px] text-white/35 bg-white/[0.04] px-3 py-1.5 rounded">{detail.levels.length} {t("nodes")}</span>
                 </div>
                 {(() => {
                   const buffDesc = detail.season_buffs?.[0]?.desc || detail.levels?.[0]?.buff_desc;
                   return buffDesc ? (
                     <div className="mt-auto p-4 rounded-lg bg-white/[0.03] border border-white/[0.04] font-orb text-[14px] text-white/40 leading-relaxed text-center tracking-wide" style={{ textShadow: "0 0 8px rgba(125,211,252,0.08)" }}>
-                      {buffDesc}
+                      {tr(buffDesc)}
                     </div>
                   ) : null;
                 })()}
@@ -596,7 +673,7 @@ export default function App() {
               {detail ? (
                 detail.levels.map(lv => <NodeCard key={lv.id} level={lv} compare={compare} />)
               ) : (
-                <div className="glass-card p-12 text-center text-white/12 font-orb text-[14px]">Select a season</div>
+                <div className="glass-card p-12 text-center text-white/12 font-orb text-[14px]">{t("selectSeason")}</div>
               )}
             </div>
           </div>
@@ -610,5 +687,6 @@ export default function App() {
         <footer className="text-center pt-12 pb-4 text-[9px] text-white/8 font-orb">Huroka.com · Honkai: Star Rail &copy; HoYoverse</footer>
       </main>
     </div>
+    </I18nContext.Provider>
   );
 }

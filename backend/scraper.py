@@ -29,6 +29,8 @@ from models import init_db, get_session, ChallengeGroup, MazeLevel, Enemy
 AGENT_BROWSER = "agent-browser"
 REQUEST_DELAY = 0.3
 MONSTER_API = "https://www.huroka.com/api/monster"
+TEXTMAP_API = "https://www.huroka.com/api/textmap?lang={lang}&branch={branch}"
+TRANSLATIONS_FILE = "translations.json"
 
 
 # ── Text cleanup ─────────────────────────────────────────
@@ -325,6 +327,33 @@ def deduplicate_by_name(session):
                 seen.add(g.name)
 
 
+# ── Textmap / Translation ────────────────────────
+
+def fetch_and_build_translations():
+    """Fetch EN and CHS textmaps, build EN→ZH translation dictionary."""
+    import os
+    print("[*] Fetching textmaps for translation...")
+    try:
+        en_map = fetch_json(TEXTMAP_API.format(lang="en", branch="prod"))
+        zh_map = fetch_json(TEXTMAP_API.format(lang="chs", branch="prod"))
+        if not isinstance(en_map, dict) or not isinstance(zh_map, dict):
+            print("[!] Textmap format unexpected, skipping translations")
+            return
+        # Build EN→ZH: for each key, if EN value differs from ZH value, map EN→ZH
+        translations = {}
+        for key, en_val in en_map.items():
+            zh_val = zh_map.get(key)
+            if zh_val and en_val and en_val != zh_val:
+                translations[en_val] = zh_val
+        print(f"[*] Built {len(translations)} EN→ZH translations")
+        filepath = os.path.join(os.path.dirname(__file__), TRANSLATIONS_FILE)
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(translations, f, ensure_ascii=False)
+        print(f"[*] Saved translations to {filepath}")
+    except Exception as e:
+        print(f"[!] Failed to build translations: {e}")
+
+
 # ── Main scraping entry ──────────────────────────────────
 
 def _scrape_seasonal(session, challenge_list, detail_url):
@@ -353,6 +382,9 @@ def run_scraper():
     global _monster_lookup
     # Reset monster name cache so new monsters from game updates are fetched
     _monster_lookup = None
+
+    # Fetch and build EN→ZH translations
+    fetch_and_build_translations()
 
     init_db()
     session = get_session()

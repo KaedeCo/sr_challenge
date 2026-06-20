@@ -230,6 +230,18 @@ def _get_aa_chart_data(session, groups):
     return chart_data
 
 
+@app.get("/api/translations")
+def get_translations():
+    """Return EN→ZH translation dictionary."""
+    import os
+    filepath = os.path.join(os.path.dirname(__file__), "translations.json")
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+
 @app.get("/api/status")
 def get_status():
     """Get database status."""
