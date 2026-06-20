@@ -1,0 +1,289 @@
+@import "tailwindcss";
+
+:root {
+  --bg-deep: #050510;
+  --bg-card: rgba(12, 12, 36, 0.62);
+  --accent: #7dd3fc;
+  --accent-glow: rgba(125, 211, 252, 0.35);
+  --accent2: #c084fc;
+  --text-primary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --border: rgba(125, 211, 252, 0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Starfield */
+body::before {
+  content: ""; position: fixed; inset: 0;
+  background:
+    radial-gradient(1px 1px at 8% 15%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 22% 42%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.5px 1.5px at 38% 8%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 52% 62%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 68% 28%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1.5px 1.5px at 82% 52%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(2px 2px at 18% 58%, rgba(150,180,255,0.45), transparent),
+    radial-gradient(2px 2px at 48% 18%, rgba(200,180,255,0.35), transparent),
+    radial-gradient(2px 2px at 72% 72%, rgba(150,200,255,0.45), transparent),
+    radial-gradient(2.5px 2.5px at 92% 38%, rgba(200,210,255,0.3), transparent),
+    radial-gradient(3px 3px at 5% 38%, rgba(220,220,255,0.3), transparent);
+  z-index: 0; pointer-events: none;
+}
+
+/* ── Layout: sidebar + wide main ── */
+.app-container {
+  position: relative; z-index: 1;
+  display: flex; min-height: 100vh;
+}
+
+/* ── Sidebar: full height, glowing ── */
+.sidebar-fixed {
+  position: sticky; top: 0; left: 0;
+  width: 300px; height: 100vh;
+  flex-shrink: 0;
+  background: rgba(8, 8, 26, 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-right: 1px solid rgba(125, 211, 252, 0.15);
+  box-shadow:
+    4px 0 40px rgba(125, 211, 252, 0.08),
+    inset -1px 0 0 rgba(125, 211, 252, 0.06);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-fixed::after {
+  content: ""; position: absolute; top: 0; right: 0; width: 1px; height: 100%;
+  background: linear-gradient(180deg, transparent, rgba(125,211,252,0.3), transparent);
+  pointer-events: none;
+}
+
+.sidebar-header { padding: 22px 20px 14px; border-bottom: 1px solid var(--border); }
+
+.sidebar-title {
+  font-family: 'Orbitron', sans-serif !important;
+  font-size: 1.4rem; font-weight: 800;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, #e2e8f0 0%, #7dd3fc 45%, #c084fc 80%, #e2e8f0 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+}
+
+.sidebar-subtitle {
+  font-family: 'Space Mono', monospace !important;
+  font-size: 0.65rem;
+  color: #7dd3fc;
+  letter-spacing: 0.04em;
+  opacity: 0.9;
+  margin-top: 4px;
+  line-height: 22px;
+  text-shadow: 0 0 6px rgba(125,211,252,0.45), 0 0 14px rgba(125,211,252,0.18);
+  white-space: nowrap;
+}
+
+.sidebar-tabs { padding: 12px 16px 8px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--border); }
+.sidebar-content { flex: 1; overflow-y: auto; padding: 12px 0; }
+
+.sidebar-section-label {
+  font-family: 'Orbitron', sans-serif !important;
+  font-size: 0.78rem; letter-spacing: 0.14em;
+  color: var(--accent); opacity: 0.55;
+  text-transform: uppercase;
+  padding: 8px 20px 10px;
+}
+
+.season-list-item {
+  font-family: 'Orbitron', sans-serif !important;
+  font-size: 0.88rem; font-weight: 500;
+  padding: 11px 20px; cursor: pointer;
+  color: var(--text-muted);
+  border-left: 2px solid transparent;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.season-list-item:hover { background: rgba(125, 211, 252, 0.06); color: var(--text-primary); }
+.season-list-item.active {
+  background: rgba(125, 211, 252, 0.1);
+  border-left-color: var(--accent);
+  color: var(--accent);
+  box-shadow: inset 0 0 20px rgba(125, 211, 252, 0.04);
+}
+
+/* ── Main: full width, no max cap ── */
+.main-content {
+  flex: 1; min-width: 0;
+  padding: 0 32px 60px;
+  width: 100%;
+}
+
+/* ── Needle gradient animation ── */
+@keyframes needleGlow {
+  0%, 100% { stroke: #7dd3fc; }
+  33% { stroke: #a78bfa; }
+  66% { stroke: #c084fc; }
+}
+.needle-line {
+  animation: needleGlow 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(125,211,252,0.6)) drop-shadow(0 0 8px rgba(192,132,252,0.3));
+}
+.needle-center {
+  animation: needleGlow 3s ease-in-out infinite;
+}
+
+/* ── Detail scroll area ── */
+.detail-scroll {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+/* ── Cool O circle ── */
+.cool-circle {
+  display: inline-block;
+  position: relative;
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+  margin: 0 2px;
+  flex-shrink: 0;
+  animation: spin-cool 3s linear infinite;
+}
+.o-letter {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: 'Space Mono', monospace !important;
+  font-size: 0.5rem;
+  color: #7dd3fc;
+  text-shadow: 0 0 4px rgba(125,211,252,0.6);
+  line-height: 1;
+}
+@keyframes spin-cool {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── Season hover tooltip ── */
+.season-tooltip {
+  position: fixed;
+  z-index: 9999;
+  padding: 8px 18px;
+  background: rgba(8, 8, 26, 0.95);
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  font-family: 'Orbitron', sans-serif !important;
+  font-size: 0.8rem;
+  color: #7dd3fc;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  max-width: 600px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px rgba(125,211,252,0.08);
+  text-shadow: 0 0 6px rgba(125,211,252,0.3);
+  animation: tooltip-fade 0.2s ease-out;
+}
+@keyframes tooltip-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Glass cards ── */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-card:hover { border-color: rgba(125, 211, 252, 0.22); }
+
+/* ── Sci-Fi clip tabs ── */
+.clip-tab {
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  font-family: 'Orbitron', sans-serif !important;
+  font-weight: 600; font-size: 0.88rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 11px 18px; cursor: pointer;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  white-space: nowrap;
+  min-height: 44px;
+  display: flex; align-items: center;
+}
+
+/* ── Display screen ── */
+.display-screen {
+  background: rgba(0, 5, 15, 0.6);
+  border: 1px solid rgba(0, 255, 180, 0.12);
+  border-radius: 8px;
+  box-shadow: inset 0 0 25px rgba(0, 255, 180, 0.04), 0 0 15px rgba(0,255,180,0.03);
+  font-family: 'Orbitron', sans-serif !important;
+}
+
+/* ── Analysis table with glow ── */
+.analysis-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(125, 211, 252, 0.15);
+  border-radius: 14px;
+  box-shadow: 0 0 25px rgba(125, 211, 252, 0.06), inset 0 0 30px rgba(125, 211, 252, 0.015);
+  overflow: hidden;
+}
+
+/* ── Data table ── */
+.data-table th {
+  font-family: 'Orbitron', sans-serif !important;
+  font-size: 0.75rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  opacity: 0.6; padding: 12px 16px;
+  text-align: left; border-bottom: 1px solid rgba(125,211,252,0.1);
+}
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+/* ── Gauge glow ring ── */
+.gauge-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(125, 211, 252, 0.15);
+  border-radius: 14px;
+  box-shadow: 0 0 30px rgba(125, 211, 252, 0.05);
+}
+
+/* ── Enemy row ── */
+.enemy-row:hover { background: rgba(125,211,252,0.03); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(125,211,252,0.12); border-radius: 2px; }
+
+/* ── Recharts ── */
+.recharts-text { font-family: 'Cascadia Code', 'Consolas', monospace !important; font-size: 9px !important; }
+.recharts-cartesian-axis-tick-value { font-family: 'Cambria Math', serif !important; }
+
+/* ── Utility font classes ── */
+.font-orb { font-family: 'Orbitron', sans-serif !important; }
+.font-mono { font-family: 'Space Mono', monospace !important; }
+.font-math { font-family: 'Cambria Math', serif !important; }
+.font-code { font-family: 'Cascadia Code', 'Consolas', monospace !important; }
