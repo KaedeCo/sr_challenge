@@ -30,7 +30,6 @@ AGENT_BROWSER = "agent-browser"
 REQUEST_DELAY = 0.3
 MONSTER_API = "https://www.huroka.com/api/monster"
 TEXTMAP_API = "https://www.huroka.com/api/textmap?lang={lang}&branch={branch}"
-TRANSLATIONS_FILE = "translations.json"
 
 
 # ── Text cleanup ─────────────────────────────────────────
@@ -156,6 +155,7 @@ def parse_challenge(data, api_id):
     raw_buffs = data.get("seasonBuffs1", [])
     for b in raw_buffs:
         if "desc" in b:
+            b["desc_raw"] = b["desc"]        # keep original for textmap lookup
             b["desc"] = clean_text(b["desc"])
 
     has_starward = bool(data.get("tierceMazeLevels"))
@@ -243,6 +243,7 @@ def _parse_single_level(raw_level, mode, node_num, is_starward=False):
     buff = raw_level.get("buff", {})
     targets = raw_level.get("targets", [])
 
+    raw_buff_desc = buff.get("desc", "")
     level_info = {
         "level_api_id": str(raw_level.get("id", "")),
         "name": raw_level.get("name", f"Node {node_num}"),
@@ -250,7 +251,8 @@ def _parse_single_level(raw_level, mode, node_num, is_starward=False):
         "stage_num": node_num,
         "damage_types": json.dumps(damage_types, ensure_ascii=False),
         "buff_name": buff.get("name", ""),
-        "buff_desc": clean_text(buff.get("desc", "")),
+        "buff_desc": clean_text(raw_buff_desc),
+        "buff_desc_raw": raw_buff_desc,  # original for textmap lookup
         "targets": json.dumps(targets, ensure_ascii=False),
         "is_starward": is_starward,
     }
@@ -271,61 +273,35 @@ def _parse_single_level(raw_level, mode, node_num, is_starward=False):
     return {"level": level_info, "enemies": all_enemies}
 
 
-# ── Translation helper ──────────────────────────────────
-
-_translation_map = None
-
-def load_translation_map():
-    """Load the EN→ZH translation map from translations.json."""
-    global _translation_map
-    if _translation_map is not None:
-        return _translation_map
-    import os
-    filepath = os.path.join(os.path.dirname(__file__), TRANSLATIONS_FILE)
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            _translation_map = json.load(f)
-        print(f"[*] Loaded {len(_translation_map)} translations for ZH fields")
-    except FileNotFoundError:
-        print("[!] translations.json not found, ZH fields will be empty")
-        _translation_map = {}
-    return _translation_map
-
-def translate_text(text, tmap):
-    """Translate text using the translation map. Returns original if not found."""
-    if not text:
-        return text
-    return tmap.get(text, text)
-
-
 def apply_translations(group, levels, enemies):
-    """Populate _zh fields on group, levels, and enemies using the translation map."""
-    tmap = load_translation_map()
+    """Populate _zh fields using Hash ID lookup via textmaps."""
 
     # Group name
-    group["name_zh"] = translate_text(group.get("name", ""), tmap)
+    group["name_zh"] = translate_text_by_hash(group.get("name", ""))
 
     # Season buffs
     raw_buffs = json.loads(group.get("season_buffs", "[]"))
     zh_buffs = []
     for b in raw_buffs:
         zb = dict(b)
+        zb.pop("desc_raw", None)
         if "name" in zb:
-            zb["name"] = translate_text(zb["name"], tmap)
+            zb["name"] = translate_text_by_hash(zb["name"])
         if "desc" in zb:
-            zb["desc"] = translate_text(zb["desc"], tmap)
+            zb["desc"] = translate_text_by_hash(zb["desc"])
         zh_buffs.append(zb)
     group["season_buffs_zh"] = json.dumps(zh_buffs, ensure_ascii=False)
 
     # Levels
     for lv in levels:
-        lv["name_zh"] = translate_text(lv.get("name", ""), tmap)
-        lv["buff_name_zh"] = translate_text(lv.get("buff_name", ""), tmap)
-        lv["buff_desc_zh"] = translate_text(lv.get("buff_desc", ""), tmap)
+        lv.pop("buff_desc_raw", None)
+        lv["name_zh"] = translate_text_by_hash(lv.get("name", ""))
+        lv["buff_name_zh"] = translate_text_by_hash(lv.get("buff_name", ""))
+        lv["buff_desc_zh"] = translate_text_by_hash(lv.get("buff_desc", ""))
 
     # Enemies
     for e in enemies:
-        e["monster_name_zh"] = translate_text(e.get("monster_name", ""), tmap)
+        e["monster_name_zh"] = translate_text_by_hash(e.get("monster_name", ""))
 
 
 # ── Database storage ─────────────────────────────────────
@@ -386,29 +362,83 @@ def deduplicate_by_name(session):
 
 # ── Textmap / Translation ────────────────────────
 
-def fetch_and_build_translations():
-    """Fetch EN and CHS textmaps, build EN→ZH translation dictionary."""
+_TEXTMAP_EN = "textmap_en.json"
+_TEXTMAP_ZH = "textmap_zh.json"
+
+def fetch_textmaps():
+    """Download EN and ZH textmaps as-is from huroka.com."""
     import os
-    print("[*] Fetching textmaps for translation...")
+    print("[*] Fetching textmaps...")
+    base = os.path.dirname(__file__)
     try:
-        en_map = fetch_json(TEXTMAP_API.format(lang="en", branch="prod"))
-        zh_map = fetch_json(TEXTMAP_API.format(lang="chs", branch="prod"))
-        if not isinstance(en_map, dict) or not isinstance(zh_map, dict):
-            print("[!] Textmap format unexpected, skipping translations")
-            return
-        # Build EN→ZH: for each key, if EN value differs from ZH value, map EN→ZH
-        translations = {}
-        for key, en_val in en_map.items():
-            zh_val = zh_map.get(key)
-            if zh_val and en_val and en_val != zh_val:
-                translations[en_val] = zh_val
-        print(f"[*] Built {len(translations)} EN→ZH translations")
-        filepath = os.path.join(os.path.dirname(__file__), TRANSLATIONS_FILE)
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(translations, f, ensure_ascii=False)
-        print(f"[*] Saved translations to {filepath}")
+        for lang, fname in [("en", _TEXTMAP_EN), ("chs", _TEXTMAP_ZH)]:
+            data = fetch_json(TEXTMAP_API.format(lang=lang, branch="prod"))
+            with open(os.path.join(base, fname), "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+        print(f"[*] Textmaps saved ({_TEXTMAP_EN}, {_TEXTMAP_ZH})")
     except Exception as e:
-        print(f"[!] Failed to build translations: {e}")
+        print(f"[!] Failed to fetch textmaps: {e}")
+
+
+# In-memory cache for textmap lookups
+_textmap_en_cache = None
+_textmap_zh_cache = None
+
+def _load_textmaps():
+    global _textmap_en_cache, _textmap_zh_cache
+    if _textmap_en_cache is not None:
+        return _textmap_en_cache, _textmap_zh_cache
+    import os
+    base = os.path.dirname(__file__)
+    with open(os.path.join(base, _TEXTMAP_EN), "r", encoding="utf-8") as f:
+        _textmap_en_cache = json.load(f)
+    with open(os.path.join(base, _TEXTMAP_ZH), "r", encoding="utf-8") as f:
+        _textmap_zh_cache = json.load(f)
+    print(f"[*] Loaded textmaps: {len(_textmap_en_cache)} EN, {len(_textmap_zh_cache)} ZH")
+    return _textmap_en_cache, _textmap_zh_cache
+
+
+def _find_textmap_hash(en_text):
+    """Given cleaned English text, find its Hash ID in the EN textmap.
+    Uses exact match first, then template pattern match for entries with #N[i] placeholders."""
+    if not en_text:
+        return None
+    en_map, _ = _load_textmaps()
+    # Exact match
+    for hash_id, val in en_map.items():
+        clean = clean_text(val)
+        if clean == en_text:
+            return hash_id
+    # Template match: convert keys with #N[i] to regex
+    for hash_id, val in en_map.items():
+        clean = clean_text(val)
+        if "#1[i]" not in clean and "#2[i]" not in clean:
+            continue
+        pattern = re.escape(clean)
+        pattern = pattern.replace(r"\#1\[i\]", r"(\S+)")
+        pattern = pattern.replace(r"\#2\[i\]", r"(\S+)")
+        pattern = pattern.replace(r"\#3\[i\]", r"(\S+)")
+        pattern = pattern.replace(r"\#4\[i\]", r"(\S+)")
+        if re.fullmatch(pattern, en_text):
+            return hash_id
+    return None
+
+
+def _translate_by_hash(hash_id):
+    """Get Chinese text for a Hash ID from the ZH textmap."""
+    if not hash_id:
+        return ""
+    _, zh_map = _load_textmaps()
+    raw = zh_map.get(hash_id, "")
+    return clean_text(raw) if raw else ""
+
+
+def translate_text_by_hash(en_text):
+    """Translate English text to Chinese using textmap Hash ID lookup."""
+    if not en_text:
+        return ""
+    hash_id = _find_textmap_hash(en_text)
+    return _translate_by_hash(hash_id) if hash_id else ""
 
 
 # ── Main scraping entry ──────────────────────────────────
@@ -441,8 +471,8 @@ def run_scraper():
     # Reset monster name cache so new monsters from game updates are fetched
     _monster_lookup = None
 
-    # Fetch and build EN→ZH translations
-    fetch_and_build_translations()
+    # Fetch EN + ZH textmaps from huroka.com
+    fetch_textmaps()
 
     init_db()
     session = get_session()
