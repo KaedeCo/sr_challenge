@@ -26,7 +26,7 @@ function GrowthRows({ windows, fontSize }: { windows: { label: string; avgPct: n
           <tr key={i}>
             <td colSpan={4} className="text-center" style={i === 0 ? { borderTop: "1px solid rgba(125,211,252,0.08)" } : {}}>
               <div style={{ padding: "10px 0 2px", display: "flex", justifyContent: "center", alignItems: "baseline", gap: "18px", flexWrap: "wrap" }}>
-                <span className="font-orb font-bold" style={{ fontSize: "0.82rem", letterSpacing: "0.06em", background: "linear-gradient(135deg, #7dd3fc, #c084fc)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>{w.label}</span>
+                <span className="font-orb font-bold" style={{ fontSize, letterSpacing: "0.06em", background: "linear-gradient(135deg, #7dd3fc, #c084fc)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>{w.label}</span>
                 <span className="font-orb" style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.62rem", letterSpacing: "0.05em" }}>AVG</span>
                 <span className="font-orb font-bold" style={{ fontSize, color, textShadow: `0 0 12px ${glow}` }}>{isPositive ? "+" : ""}{w.avgPct.toFixed(2)}%</span>
                 <span className="font-orb" style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.62rem", letterSpacing: "0.05em" }}>×2 IN</span>
