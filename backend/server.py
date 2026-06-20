@@ -91,11 +91,13 @@ def get_seasons(mode_key: str):
                 "id": g.id,
                 "api_id": g.api_id,
                 "name": g.name,
+                "name_zh": g.name_zh or g.name,
                 "schedule_data_id": g.schedule_data_id,
                 "has_starward": g.has_starward,
                 "is_beta": g.is_beta,
                 "level_count": g.level_count,
                 "season_buffs": json.loads(g.season_buffs) if g.season_buffs else [],
+                "season_buffs_zh": json.loads(group.season_buffs_zh) if group.season_buffs_zh else [],
             }
             for g in groups
         ]
@@ -130,18 +132,22 @@ def get_season_detail(season_id: int):
             level_data.append({
                 "id": lv.id,
                 "name": lv.name,
+                "name_zh": lv.name_zh or lv.name,
                 "floor": lv.floor,
                 "stage_num": lv.stage_num,
                 "category": lv.category,
                 "damage_types": json.loads(lv.damage_types) if lv.damage_types else [],
                 "buff_name": lv.buff_name,
                 "buff_desc": lv.buff_desc,
+                "buff_name_zh": lv.buff_name_zh or lv.buff_name,
+                "buff_desc_zh": lv.buff_desc_zh or lv.buff_desc,
                 "targets": json.loads(lv.targets) if lv.targets else [],
                 "total_hp": lv.total_hp,
                 "is_starward": lv.is_starward,
                 "enemies": [
                     {
                         "name": e.monster_name,
+                        "name_zh": e.monster_name_zh or e.monster_name,
                         "level": e.enemy_level,
                         "hp": e.hp,
                         "speed": e.speed,
@@ -158,10 +164,12 @@ def get_season_detail(season_id: int):
             "id": group.id,
             "api_id": group.api_id,
             "name": group.name,
+            "name_zh": group.name_zh or group.name,
             "mode": group.mode,
             "schedule_data_id": group.schedule_data_id,
             "has_starward": group.has_starward,
             "season_buffs": json.loads(group.season_buffs) if group.season_buffs else [],
+            "season_buffs_zh": json.loads(group.season_buffs_zh) if group.season_buffs_zh else [],
             "levels": level_data,
             "total_hp_all": sum(lv["total_hp"] for lv in level_data),
         }
@@ -199,6 +207,7 @@ def _get_normal_chart_data(session, groups):
         ) or 0
         chart_data.append({
             "season_name": g.name,
+            "season_name_zh": g.name_zh or g.name,
             "schedule_data_id": g.schedule_data_id,
             "total_hp": round(total_hp, 0),
             "has_starward": g.has_starward,
@@ -221,6 +230,7 @@ def _get_aa_chart_data(session, groups):
 
         chart_data.append({
             "season_name": g.name,
+            "season_name_zh": g.name_zh or g.name,
             "schedule_data_id": g.schedule_data_id,
             "knights_hp": round(knights_hp, 0),
             "kic_hp": round(kic_hp, 0),

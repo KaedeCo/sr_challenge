@@ -271,6 +271,63 @@ def _parse_single_level(raw_level, mode, node_num, is_starward=False):
     return {"level": level_info, "enemies": all_enemies}
 
 
+# ── Translation helper ──────────────────────────────────
+
+_translation_map = None
+
+def load_translation_map():
+    """Load the EN→ZH translation map from translations.json."""
+    global _translation_map
+    if _translation_map is not None:
+        return _translation_map
+    import os
+    filepath = os.path.join(os.path.dirname(__file__), TRANSLATIONS_FILE)
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            _translation_map = json.load(f)
+        print(f"[*] Loaded {len(_translation_map)} translations for ZH fields")
+    except FileNotFoundError:
+        print("[!] translations.json not found, ZH fields will be empty")
+        _translation_map = {}
+    return _translation_map
+
+def translate_text(text, tmap):
+    """Translate text using the translation map. Returns original if not found."""
+    if not text:
+        return text
+    return tmap.get(text, text)
+
+
+def apply_translations(group, levels, enemies):
+    """Populate _zh fields on group, levels, and enemies using the translation map."""
+    tmap = load_translation_map()
+
+    # Group name
+    group["name_zh"] = translate_text(group.get("name", ""), tmap)
+
+    # Season buffs
+    raw_buffs = json.loads(group.get("season_buffs", "[]"))
+    zh_buffs = []
+    for b in raw_buffs:
+        zb = dict(b)
+        if "name" in zb:
+            zb["name"] = translate_text(zb["name"], tmap)
+        if "desc" in zb:
+            zb["desc"] = translate_text(zb["desc"], tmap)
+        zh_buffs.append(zb)
+    group["season_buffs_zh"] = json.dumps(zh_buffs, ensure_ascii=False)
+
+    # Levels
+    for lv in levels:
+        lv["name_zh"] = translate_text(lv.get("name", ""), tmap)
+        lv["buff_name_zh"] = translate_text(lv.get("buff_name", ""), tmap)
+        lv["buff_desc_zh"] = translate_text(lv.get("buff_desc", ""), tmap)
+
+    # Enemies
+    for e in enemies:
+        e["monster_name_zh"] = translate_text(e.get("monster_name", ""), tmap)
+
+
 # ── Database storage ─────────────────────────────────────
 
 def store_challenge(session, group_data, levels_data, enemies_data):
@@ -369,6 +426,7 @@ def _scrape_seasonal(session, challenge_list, detail_url):
         try:
             detail = fetch_json(detail_url.format(id=api_id))
             group, levels, enemies = parse_challenge(detail, api_id)
+            apply_translations(group, levels, enemies)
             store_challenge(session, group, levels, enemies)
             total_hp = sum(lv["total_hp"] for lv in levels)
             print(f"  [{detail_url[:40]}...] OK {name} (id={api_id}) | {len(levels)} nodes | HP={total_hp:,.0f}")

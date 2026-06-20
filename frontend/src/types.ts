@@ -9,15 +9,18 @@ export interface SeasonSummary {
   id: number;
   api_id: string;
   name: string;
+  name_zh: string;
   schedule_data_id: number;
   has_starward: boolean;
   is_beta: boolean;
   level_count: number;
   season_buffs: { name: string; desc: string }[];
+  season_buffs_zh: { name: string; desc: string }[];
 }
 
 export interface EnemyData {
   name: string;
+  name_zh: string;
   level: number;
   hp: number;
   speed: number;
@@ -30,12 +33,15 @@ export interface EnemyData {
 export interface LevelDetail {
   id: number;
   name: string;
+  name_zh: string;
   floor: number;
   stage_num: number;
   category: string | null;
   damage_types: string[];
   buff_name: string;
   buff_desc: string;
+  buff_name_zh: string;
+  buff_desc_zh: string;
   targets: string[];
   total_hp: number;
   is_starward: boolean;
@@ -50,6 +56,7 @@ export interface SeasonDetail extends SeasonSummary {
 
 export interface ChartDataPoint {
   season_name: string;
+  season_name_zh: string;
   schedule_data_id: number;
   total_hp: number;
   has_starward: boolean;

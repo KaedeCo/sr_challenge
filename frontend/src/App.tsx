@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 import type { ModeInfo, SeasonSummary, SeasonDetail, ChartDataPoint, ComparisonEntry, LevelDetail } from "./types";
 import { MODE_COLORS, MODE_NAMES } from "./types";
-import { getModes, getSeasons, getSeasonDetail, getChartData, getComparison, getTranslations } from "./api";
+import { getModes, getSeasons, getSeasonDetail, getChartData, getComparison } from "./api";
 
 // ── i18n ──
 type Lang = "en" | "zh";
@@ -73,8 +73,8 @@ function fmtFull(n: number): string {
 const I18nContext = React.createContext<{
   lang: Lang;
   t: (key: keyof typeof UI_TEXT["en"]) => string;
-  tr: (text: string) => string;
-}>({ lang: "en", t: (k) => UI_TEXT.en[k], tr: (t) => t });
+  tr: (en: string, zh: string) => string;
+}>({ lang: "zh", t: (k) => UI_TEXT.zh[k], tr: (en, zh) => zh || en });
 const useI18n = () => React.useContext(I18nContext);
 
 
@@ -212,12 +212,12 @@ function Sidebar({ modes, active, onMode, seasons, selIdx, onSeason, color }: {
             const isA = realIdx === selIdx;
             return (
               <div key={s.id} onClick={() => onSeason(realIdx)}
-                onMouseEnter={() => handleMouseEnter(s.name)}
+                onMouseEnter={() => handleMouseEnter(tr(s.name, s.name_zh))}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 className={`season-list-item ${isA ? "active" : ""}`}
                 style={isA ? { borderLeftColor: color, color } : {}}>
-                {seasons.length - i}. {tr(s.name)}
+                {seasons.length - i}. {tr(s.name, s.name_zh)}
               </div>
             );
           })}
@@ -357,7 +357,7 @@ function NodeCard({ level, compare }: { level: LevelDetail; compare: ComparisonE
     <div className={`glass-card p-5 ${level.is_starward ? "border-purple-500/15" : ""}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <h4 className="font-orb font-semibold text-[17px]" style={{ letterSpacing: "0.04em" }}>{tr(level.name)}</h4>
+          <h4 className="font-orb font-semibold text-[17px]" style={{ letterSpacing: "0.04em" }}>{tr(level.name, level.name_zh)}</h4>
           {level.is_starward && <span className="font-orb text-[11px] px-2 py-0.5 rounded bg-purple-500/12 text-purple-300">SW</span>}
         </div>
         <span className="font-math text-[14px] text-sky-300/55">HP {fmt(level.total_hp)}</span>
@@ -366,7 +366,7 @@ function NodeCard({ level, compare }: { level: LevelDetail; compare: ComparisonE
       {on && <div className="mt-2">{Array.from(waves.entries()).sort(([a],[b])=>a-b).map(([wn,ens])=>(
         <div key={wn} className="mb-2">
           <div className="font-orb text-[12px] text-white/20 px-4 mb-1">{t("wave")} {wn}</div>
-          {ens.map((e,i)=>{const cmp=compare.find(c=>c.monster_name===e.name&&c.category===level.category);return <EnemyRow key={i} name={tr(e.name)} level={e.level} hp={e.hp} spd={e.speed} tough={e.toughness} effRes={e.effect_res} qty={e.quantity} changePct={cmp?.hp_change_pct??null}/>;})}
+          {ens.map((e,i)=>{const cmp=compare.find(c=>c.monster_name===e.name&&c.category===level.category);return <EnemyRow key={i} name={tr(e.name, e.name_zh)} level={e.level} hp={e.hp} spd={e.speed} tough={e.toughness} effRes={e.effect_res} qty={e.quantity} changePct={cmp?.hp_change_pct??null}/>;})}
         </div>
       ))}</div>}
     </div>
@@ -374,13 +374,13 @@ function NodeCard({ level, compare }: { level: LevelDetail; compare: ComparisonE
 }
 
 // ── Display Screen ──
-function DisplayScreen({ name, hp }: { name: string; hp: number }) {
+function DisplayScreen({ name, nameZh, hp }: { name: string; nameZh: string; hp: number }) {
   const { t, tr } = useI18n();
   return (
     <div className="display-screen p-5 flex justify-between items-center">
       <div>
         <div className="font-orb text-[12px] text-emerald-400/50 tracking-[0.1em] uppercase mb-1">{t("currentSeason")}</div>
-        <div className="font-orb text-[18px] tracking-wider text-white/90">{tr(name)}</div>
+        <div className="font-orb text-[18px] tracking-wider text-white/90">{tr(name, nameZh)}</div>
       </div>
       <div className="text-right">
         <div className="font-orb text-[12px] text-emerald-400/50 tracking-[0.1em] uppercase mb-1">{t("totalHP")}</div>
@@ -403,7 +403,7 @@ function ChartPanel({ chartData, color, idx }: {
 
   // Combined data: actual + prediction with null gap
   const combined: any[] = chartData.map((d, i) => ({
-    season_name: tr(d.season_name),
+    season_name: tr(d.season_name, d.season_name_zh),
     actual: d.total_hp,
     fit: fit ? fit.A * Math.exp(fit.B * (i + 1)) : null,
     pred: null,
@@ -461,7 +461,7 @@ function ChartPanel({ chartData, color, idx }: {
       </div>
 
       {/* Display screen */}
-      {chartData[idx] && <DisplayScreen name={chartData[idx].season_name} hp={chartData[idx].total_hp} />}
+      {chartData[idx] && <DisplayScreen name={chartData[idx].season_name} nameZh={chartData[idx].season_name_zh} hp={chartData[idx].total_hp} />}
 
       {/* Analysis table */}
       {fit && (
@@ -524,7 +524,7 @@ function AACharts({ chartData }: { chartData: ChartDataPoint[] }) {
         // Convert AA data to ChartDataPoint format for fit
         const fitData: ChartDataPoint[] = chartData.map(d => ({ ...d, total_hp: (d[k] as number) || 0 }));
         const fit = computeExpFit(fitData);
-        const combined: any[] = fitData.map((d, i) => ({ season_name: tr(d.season_name), actual: d.total_hp, fit: fit ? fit.A * Math.exp(fit.B * (i + 1)) : null, pred: null }));
+        const combined: any[] = fitData.map((d, i) => ({ season_name: tr(d.season_name, d.season_name_zh), actual: d.total_hp, fit: fit ? fit.A * Math.exp(fit.B * (i + 1)) : null, pred: null }));
         if (fit && fitData.length > 0) {
           const last = fitData[fitData.length - 1];
           combined.push({ season_name: last.season_name, actual: null, fit: null, pred: last.total_hp });
@@ -549,7 +549,7 @@ function AACharts({ chartData }: { chartData: ChartDataPoint[] }) {
             </div>
             {fit && (
               <div className="analysis-card">
-                <div className="font-orb px-5 py-3 border-b border-white/5 text-center" style={{ fontSize: "0.85rem", fontWeight: 600, letterSpacing: "0.12em", color: "rgba(125,211,252,0.6)", textTransform: "uppercase" }}>{tr(l)} · {t("analysis")}</div>
+                <div className="font-orb px-5 py-3 border-b border-white/5 text-center" style={{ fontSize: "0.85rem", fontWeight: 600, letterSpacing: "0.12em", color: "rgba(125,211,252,0.6)", textTransform: "uppercase" }}>{l} · {t("analysis")}</div>
                 <table className="data-table w-full">
                   <thead><tr><th>{t("metric")}</th><th>{t("value")}</th><th>{t("metric")}</th><th>{t("value")}</th></tr></thead>
                   <tbody>
@@ -593,39 +593,16 @@ export default function App() {
   const [detail, setDetail] = useState<SeasonDetail | null>(null);
   const [compare, setCompare] = useState<ComparisonEntry[]>([]);
   const [lang, setLang] = useState<Lang>(() => (localStorage.getItem("sr-lang") as Lang) || "zh");
-  const [translations, setTranslations] = useState<Record<string, string>>({});
   const color = MODE_COLORS[activeMode] || "#7dd3fc";
   const isAA = activeMode === "anomaly_arbitration";
 
-  const tr = useCallback((text: string) => {
-    if (lang === "en" || !text) return text;
-    return translations[text] || text;
-  }, [lang, translations]);
-
-  // Deep translation for long text (buff descriptions): replace known substrings
-  const trDesc = useRef<Map<string, string>>(new Map());
-  const translateDesc = useCallback((text: string) => {
-    if (lang === "en" || !text) return text;
-    // Try exact match first
-    if (translations[text]) return translations[text];
-    // Check cache
-    const cache = trDesc.current;
-    if (cache.has(text)) return cache.get(text)!;
-    // Build substring replacements: replace English phrases in the text with Chinese
-    let result = text;
-    for (const [en, zh] of Object.entries(translations)) {
-      if (en.length >= 4 && result.includes(en)) {
-        result = result.replaceAll(en, zh);
-      }
-    }
-    cache.set(text, result);
-    return result;
-  }, [lang, translations]);
+  const tr = useCallback((en: string, zh: string) => {
+    return lang === "zh" ? (zh || en) : en;
+  }, [lang]);
 
   const t = useCallback((key: keyof typeof UI_TEXT["en"]) => UI_TEXT[lang][key] || UI_TEXT.en[key], [lang]);
 
   useEffect(() => { getModes().then(setModes); }, []);
-  useEffect(() => { getTranslations().then(setTranslations).catch(() => {}); }, []);
   useEffect(() => {
     setDetail(null); setCompare([]); setGaugeIdx(0);
     Promise.all([getSeasons(activeMode), getChartData(activeMode)]).then(([s, c]) => { setSeasons(s); setChartData(c); setGaugeIdx(s.length - 1); });
@@ -681,7 +658,7 @@ export default function App() {
             {detail && (
               <div className="mt-4 glass-card p-6 flex flex-col justify-center min-h-[180px]">
                 <div className="flex items-center gap-3 flex-wrap mb-3">
-                  <h3 className="font-orb font-bold text-xl" style={{ letterSpacing: "0.06em" }}>{tr(detail.name)}</h3>
+                  <h3 className="font-orb font-bold text-xl" style={{ letterSpacing: "0.06em" }}>{tr(detail.name, detail.name_zh)}</h3>
                   {detail.has_starward && <span className="font-orb text-[11px] px-2.5 py-1 rounded bg-purple-500/15 text-purple-300 tracking-wider">{lang === "zh" ? "星启" : "STARWARD"}</span>}
                 </div>
                 <div className="flex gap-3 mt-1 flex-wrap mb-4">
@@ -689,12 +666,14 @@ export default function App() {
                   <span className="font-code text-[13px] text-white/35 bg-white/[0.04] px-3 py-1.5 rounded">{detail.levels.length} {t("nodes")}</span>
                 </div>
                 {(() => {
-                  const buffName = detail.season_buffs?.[0]?.name || detail.levels?.[0]?.buff_name;
-                  const buffDesc = detail.season_buffs?.[0]?.desc || detail.levels?.[0]?.buff_desc;
-                  return buffDesc ? (
+                  const enName = detail.season_buffs?.[0]?.name || detail.levels?.[0]?.buff_name;
+                  const enDesc = detail.season_buffs?.[0]?.desc || detail.levels?.[0]?.buff_desc;
+                  const zhName = detail.season_buffs_zh?.[0]?.name || detail.levels?.[0]?.buff_name_zh;
+                  const zhDesc = detail.season_buffs_zh?.[0]?.desc || detail.levels?.[0]?.buff_desc_zh;
+                  return enDesc ? (
                     <div className="mt-auto p-4 rounded-lg bg-white/[0.03] border border-white/[0.04] font-orb text-center tracking-wide" style={{ textShadow: "0 0 8px rgba(125,211,252,0.08)" }}>
-                      {buffName && <div className="font-orb font-bold text-[15px] text-sky-300/60 mb-2" style={{ textShadow: "0 0 6px rgba(125,211,252,0.2)" }}>{tr(buffName)}</div>}
-                      <div className="text-[14px] text-white/40 leading-relaxed">{translateDesc(buffDesc)}</div>
+                      {enName && <div className="font-orb font-bold text-[15px] text-sky-300/60 mb-2" style={{ textShadow: "0 0 6px rgba(125,211,252,0.2)" }}>{tr(enName, zhName)}</div>}
+                      <div className="text-[14px] text-white/40 leading-relaxed">{tr(enDesc, zhDesc)}</div>
                     </div>
                   ) : null;
                 })()}

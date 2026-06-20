@@ -16,6 +16,3 @@ export function getChartData(mode: string) { return fetchJSON<ChartDataPoint[]>(
 export function getComparison(mode: string, seasonId: number) {
   return fetchJSON<ComparisonEntry[]>(`${BASE}/compare/${mode}?season_id=${seasonId}`);
 }
-export function getTranslations() {
-  return fetchJSON<Record<string, string>>(`${BASE}/translations`);
-}

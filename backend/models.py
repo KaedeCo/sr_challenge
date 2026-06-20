@@ -19,6 +19,7 @@ class ChallengeGroup(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     api_id = Column(String, unique=True, index=True)      # API id like "1034"
     name = Column(String, nullable=False)
+    name_zh = Column(String)                                # Chinese name
     group_type = Column(String, nullable=False)             # Memory, Story, Boss, Peak
     mode = Column(String, nullable=False)                   # forgotten_hall, pure_fiction, etc.
     schedule_data_id = Column(Integer, default=0)
@@ -26,6 +27,7 @@ class ChallengeGroup(Base):
     has_starward = Column(Boolean, default=False)
     is_beta = Column(Boolean, default=False)
     season_buffs = Column(Text)                             # JSON string
+    season_buffs_zh = Column(Text)                          # JSON string with Chinese text
     scraped_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     levels = relationship("MazeLevel", back_populates="group", cascade="all, delete-orphan")
@@ -39,11 +41,14 @@ class MazeLevel(Base):
     challenge_group_id = Column(Integer, ForeignKey("challenge_groups.id"), index=True)
     level_api_id = Column(String)
     name = Column(String)
+    name_zh = Column(String)                                # Chinese name
     floor = Column(Integer)
     stage_num = Column(Integer, default=1)
     damage_types = Column(String)      # JSON array
     buff_name = Column(String)
     buff_desc = Column(Text)
+    buff_name_zh = Column(String)                           # Chinese buff name
+    buff_desc_zh = Column(Text)                             # Chinese buff desc
     targets = Column(Text)             # JSON
     is_starward = Column(Boolean, default=False)
     total_hp = Column(Float, default=0.0)
@@ -62,6 +67,7 @@ class Enemy(Base):
     wave_num = Column(Integer)
     node_num = Column(Integer)
     monster_name = Column(String)
+    monster_name_zh = Column(String)                        # Chinese monster name
     monster_id = Column(String)
     enemy_level = Column("level", Integer)
     hp = Column(Float)
