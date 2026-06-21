@@ -138,7 +138,7 @@ def get_season(season_id: int):
                         "level": e.monster_level,
                         "hp": e.hp,
                         "atk": e.atk,
-                        "def": e.get("def", 0),
+                        "def": float(getattr(e, 'def_', 0)),
                         "quantity": e.quantity,
                     }
                     for e in enemies

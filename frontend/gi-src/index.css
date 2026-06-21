@@ -385,3 +385,79 @@ body::before {
   box-shadow: 0 0 16px rgba(125, 211, 252, 0.15);
   transform: translateY(-1px);
 }
+
+/* ── Monster Grid Table (SR style) ── */
+.monster-header {
+  display: grid;
+  gap: 6px;
+  padding: 7px 16px 6px;
+  border-bottom: 1px solid rgba(125,211,252,0.1);
+  transition: grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.monster-hcell {
+  font-family: "Orbitron", sans-serif !important;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(125,211,252,0.35);
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: all 0.25s ease;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.monster-hcell:first-child { text-align: left; }
+.monster-hcell:hover { color: rgba(125,211,252,0.7); background: rgba(125,211,252,0.06); }
+.monster-hcell-active { 
+  color: #7dd3fc !important; 
+  background: rgba(125,211,252,0.12); 
+  text-shadow: 0 0 8px rgba(125,211,252,0.4); 
+}
+
+.monster-row {
+  display: grid;
+  gap: 6px;
+  padding: 7px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.025);
+  transition: grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s ease;
+}
+.monster-row:last-child { border-bottom: none; }
+.monster-row:hover { background: rgba(125,211,252,0.02); }
+
+.monster-cell {
+  font-size: 0.82rem;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: all 0.18s ease;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.monster-cell:first-child { text-align: left; font-size: 0.8rem; color: rgba(186,230,253,0.8); }
+.monster-cell:hover { background: rgba(125,211,252,0.06); }
+
+.name-cell  { font-family: "Orbitron", sans-serif !important; font-size: 0.78rem; }
+.level-cell { color: #fbbf24; font-family: "Cascadia Code","Consolas",monospace !important; font-size: 0.76rem; text-shadow: 0 0 5px rgba(250,204,21,0.25); }
+.hp-cell    { color: rgba(252,211,77,0.7); font-family: "Cambria Math",serif !important; font-size: 0.84rem; }
+.stat-cell  { color: rgba(252,211,77,0.7); font-family: "Cambria Math",serif !important; font-size: 0.84rem; }
+.dps-cell   { font-family: "Orbitron", sans-serif !important; font-weight: 700 !important; font-size: 1rem !important; background: linear-gradient(135deg, #7dd3fc, #c084fc); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+.monster-cell-expanded {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  word-break: break-word;
+  background: rgba(125,211,252,0.08);
+  box-shadow: 0 0 10px rgba(125,211,252,0.06);
+  border-radius: 4px;
+  z-index: 2;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}

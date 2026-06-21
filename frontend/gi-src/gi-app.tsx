@@ -57,7 +57,7 @@ const UI_TEXT: Record<Lang, Record<string, string>> = {
     inflation3: "近3期",
     inflation5: "近5期",
     minDPS: "最低DPS",
-    modeTitle: "原神挑战数据",
+    modeTitle: "GI Challenge Stats",
   },
 };
 
@@ -215,19 +215,66 @@ function Gauge({ total, idx, onChange, color }: {
   );
 }
 
-// ── Enemy Detail Row ──
-function EnemyDetailRow({ name, nameZh, level, hp, atk, def, dps }: {
-  name: string; nameZh: string; level: number; hp: number; atk: number; def: number; dps: number;
+// ── GI Monster Columns ──
+const GI_MONSTER_COLS = [
+  { idx: 0, key: "name", label: "Monster", zhLabel: "怪物" },
+  { idx: 1, key: "level", label: "Lv", zhLabel: "等级" },
+  { idx: 2, key: "hp", label: "HP", zhLabel: "血量" },
+  { idx: 3, key: "atk", label: "ATK", zhLabel: "攻击" },
+  { idx: 4, key: "def", label: "DEF", zhLabel: "防御" },
+  { idx: 5, key: "dps", label: "Min DPS", zhLabel: "最低DPS" },
+];
+
+function defaultColFractions(): number[] {
+  return [3.0, 0.7, 1.5, 1.0, 0.8, 1.5];
+}
+
+function expandedColFractions(expIdx: number): number[] {
+  const base = defaultColFractions();
+  for (let i = 0; i < base.length; i++) {
+    base[i] = i === expIdx ? base[i] * 2.8 : base[i] * 0.45;
+  }
+  return base;
+}
+
+function textVisualWidth(text: string): number {
+  let w = 0;
+  for (const c of text) {
+    const code = c.charCodeAt(0);
+    if ((code >= 0x4E00 && code <= 0x9FFF) || (code >= 0x3000 && code <= 0x303F) 
+        || (code >= 0xFF00 && code <= 0xFFEF)) w += 2;
+    else w += 1;
+  }
+  return w;
+}
+
+// ── Enemy Row (Grid-based, SR style) ──
+function EnemyRow({ name, level, hp, atk, def, quantity, dps, gridCols, expandedCol, onCellClick }: {
+  name: string; level: number; hp: number; atk: number; def: number;
+  quantity: number; dps: number; gridCols: string;
+  expandedCol: number | null; onCellClick: (colIdx: number) => void;
 }) {
-  const { tr } = useI18n();
+  const cells = [
+    <span key={0} className={`monster-cell name-cell ${expandedCol === 0 ? "monster-cell-expanded" : "truncate"}`}
+      onClick={() => onCellClick(0)}>
+      {name}{quantity > 1 && <span className="ml-1 font-orb font-bold" style={{background:"linear-gradient(135deg,#7dd3fc,#c084fc)",WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent"}}> x{quantity}</span>}
+    </span>,
+    <span key={1} className="monster-cell level-cell" onClick={() => onCellClick(1)}>Lv.{level}</span>,
+    <span key={2} className="monster-cell hp-cell" onClick={() => onCellClick(2)}>{fmtFull(hp)}</span>,
+    <span key={3} className="monster-cell stat-cell" onClick={() => onCellClick(3)}
+      style={atk > 0 ? {} : {background:"linear-gradient(135deg,#7dd3fc,#c084fc)",WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent"}}>
+      {atk > 0 ? fmtFull(atk) : "\u2014"}
+    </span>,
+    <span key={4} className="monster-cell stat-cell" onClick={() => onCellClick(4)}
+      style={def > 0 ? {} : {background:"linear-gradient(135deg,#7dd3fc,#c084fc)",WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent"}}>
+      {def > 0 ? fmtFull(def) : "\u2014"}
+    </span>,
+    <span key={5} className="monster-cell dps-cell" onClick={() => onCellClick(5)}>{fmtFull(dps)}</span>,
+  ];
+
   return (
-    <div className="flex items-center gap-2 px-4 py-1.5 text-[14px] border-b border-white/[0.03] last:border-0 hover:bg-white/[0.01]">
-      <span className="flex-1 min-w-0 truncate text-sky-200/85 text-[13px] font-orb">{tr(name, nameZh)}</span>
-      <span className="w-12 text-right text-amber-400 font-code text-[12px]" style={{ textShadow: "0 0 4px rgba(250,204,21,0.2)" }}>Lv.{level}</span>
-      <span className="w-24 text-right text-amber-300/70 font-math text-[14px]">{fmt(hp)}</span>
-      <span className="w-20 text-right text-white/15 font-code text-[12px]">{fmt(atk)}</span>
-      <span className="w-16 text-right text-white/15 font-code text-[12px]">{fmt(def)}</span>
-      <span className="w-24 text-right font-orb font-bold text-[17px] text-red-400" style={{ textShadow: "0 0 8px rgba(248,113,113,0.4)" }}>{fmt(dps)}</span>
+    <div className="monster-row" style={{ gridTemplateColumns: gridCols }}>
+      {cells}
     </div>
   );
 }
@@ -235,29 +282,54 @@ function EnemyDetailRow({ name, nameZh, level, hp, atk, def, dps }: {
 // ── Node Card ──
 function NodeCard({ level }: { level: LevelDetail }) {
   const [on, setOn] = useState(true);
-  const { t, tr } = useI18n();
+  const [expandedCol, setExpandedCol] = useState<number | null>(null);
+  const { lang, t, tr } = useI18n();
+
+  const allNames = level.enemies.map(e => tr(e.name, e.name_zh));
+  const maxNameWidth = Math.max(...allNames.map(textVisualWidth), 8);
+  const nameFrac = Math.min(4.5, Math.max(2.0, maxNameWidth / 8));
+  const baseFractions = [nameFrac, 0.7, 1.5, 1.0, 0.8, 1.5];
+
+  const ef = expandedCol !== null ? expandedColFractions(expandedCol) : baseFractions;
+  const gridCols = ef.map(f => `${f}fr`).join(" ");
+
+  const handleCellClick = (colIdx: number) => {
+    setExpandedCol(prev => prev === colIdx ? null : colIdx);
+  };
+  useEffect(() => { if (!on) setExpandedCol(null); }, [on]);
+
   return (
     <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-2">
-        <h4 className="font-orb font-semibold text-[17px]">{tr(level.name, level.name_zh)}</h4>
+        <h4 className="font-orb font-semibold text-[17px]" style={{ letterSpacing: "0.04em" }}>
+          {tr(level.name, level.name_zh)}
+        </h4>
         <span className="font-math text-[14px] text-sky-300/55">HP {fmt(level.total_hp)}</span>
       </div>
-      <div className="font-orb text-[12px] text-white/15 mb-2">{t("minDPS")} = HP / {level.time_limit}s = <span className="text-red-400 font-bold">{fmt(level.total_hp / (level.time_limit || 90))}</span></div>
-      <button onClick={() => setOn(!on)} className="font-orb text-[13px] text-sky-400/55 hover:text-sky-300">{on ? `▼ ${t("collapse")}` : `▶ ${level.enemies.length} ${t("enemies")}`}</button>
+      <div className="font-orb text-[12px] text-white/15 mb-2">
+        {t("minDPS")} = HP / {level.time_limit}s = <span className="font-orb font-bold text-[16px]" style={{background:"linear-gradient(135deg,#7dd3fc,#c084fc)",WebkitBackgroundClip:"text",backgroundClip:"text",WebkitTextFillColor:"transparent"}}>{fmtFull(level.total_hp / (level.time_limit || 90))}</span>
+      </div>
+      <button onClick={() => setOn(!on)} className="font-orb text-[13px] text-sky-400/55 hover:text-sky-300">
+        {on ? `\u25bc ${t("collapse")}` : `\u25b6 ${level.enemies.length} ${t("enemies")}`}
+      </button>
       {on && (
         <div className="mt-2">
-          <div className="flex items-center gap-2 px-4 py-1 text-[11px] font-orb text-white/15 border-b border-white/[0.05]">
-            <span className="flex-1">Monster</span>
-            <span className="w-12 text-right">Lv</span>
-            <span className="w-24 text-right">HP</span>
-            <span className="w-20 text-right">ATK</span>
-            <span className="w-16 text-right">DEF</span>
-            <span className="w-24 text-right">Min DPS</span>
+          <div className="monster-header" style={{ gridTemplateColumns: gridCols }}>
+            {GI_MONSTER_COLS.map(c => (
+              <span key={c.idx}
+                className={`monster-hcell ${expandedCol === c.idx ? "monster-hcell-active" : ""}`}
+                onClick={() => handleCellClick(c.idx)}
+                title={expandedCol === c.idx ? undefined : (lang === "zh" ? "\u70B9\u51FB\u5C55\u5F00" : "Click to expand")}>
+                {lang === "zh" ? (c.zhLabel || c.label) : c.label}
+              </span>
+            ))}
           </div>
           {level.enemies.map((e, i) => (
-            <EnemyDetailRow key={i} name={e.name} nameZh={e.name_zh} level={e.level}
-              hp={e.hp} atk={e.atk} def={e.def}
-              dps={level.total_hp / (level.time_limit || 90)} />
+            <EnemyRow key={i}
+              name={tr(e.name, e.name_zh)} level={e.level}
+              hp={e.hp * e.quantity} atk={e.atk} def={e.def} quantity={e.quantity}
+              dps={level.total_hp / (level.time_limit || 90)}
+              gridCols={gridCols} expandedCol={expandedCol} onCellClick={handleCellClick} />
           ))}
         </div>
       )}
@@ -265,13 +337,27 @@ function NodeCard({ level }: { level: LevelDetail }) {
   );
 }
 
-// ── Chart Panel ──
-function ChartPanel({ chartData, color, idx }: { chartData: ChartDataPoint[]; color: string; idx: number }) {
-  const { t, tr } = useI18n();
-  const fit = computeExpFit(chartData);
-  if (chartData.length < 1) return <div className="glass-card p-12 text-center text-white/15 font-orb">{t("noData")}</div>;
+// ── Dedup utility ──
+function dedupData(data: ChartDataPoint[]): ChartDataPoint[] {
+  const result: ChartDataPoint[] = [];
+  for (const d of data) {
+    if (result.length === 0 || Math.abs(d.total_hp - result[result.length - 1].total_hp) > 1) {
+      result.push(d);
+    }
+  }
+  return result;
+}
 
-  const combined: any[] = chartData.map((d, i) => ({
+// ── Chart Panel ──
+function ChartPanel({ chartData, color, idx, activeMode }: { chartData: ChartDataPoint[]; color: string; idx: number; activeMode: string }) {
+  const { lang, t, tr } = useI18n();
+  const [dedup, setDedup] = useState(false);
+
+  const displayData = dedup && activeMode === "tower" ? dedupData(chartData) : chartData;
+  const fit = computeExpFit(displayData);
+  if (displayData.length < 1) return <div className="glass-card p-12 text-center text-white/15 font-orb">{t("noData")}</div>;
+
+  const combined: any[] = displayData.map((d, i) => ({
     season_name: tr(d.season_name, d.season_name_zh),
     actual: d.total_hp,
     fit: fit ? fit.A * Math.exp(fit.B * (i + 1)) : null,
@@ -283,8 +369,8 @@ function ChartPanel({ chartData, color, idx }: { chartData: ChartDataPoint[]; co
     fit.preds.forEach(p => combined.push({ season_name: p.season, actual: null, fit: null, pred: p.hp }));
   }
 
-  const refName = chartData[idx]?.season_name;
-  const lastActualName = chartData[chartData.length - 1]?.season_name;
+  const refName = displayData[Math.min(idx, displayData.length - 1)]?.season_name;
+  const lastActualName = displayData[displayData.length - 1]?.season_name;
 
   return (
     <div className="space-y-5">
@@ -308,6 +394,22 @@ function ChartPanel({ chartData, color, idx }: { chartData: ChartDataPoint[]; co
         </ResponsiveContainer>
       </div>
 
+      {activeMode === "tower" && (
+        <div className="flex justify-end">
+          <label className="flex items-center gap-2.5 cursor-pointer select-none group">
+            <div className="relative w-9 h-5">
+              <input type="checkbox" checked={dedup} onChange={() => setDedup(!dedup)} className="sr-only peer" />
+              <div className="absolute inset-0 rounded-full transition-colors duration-300"
+                style={{ background: dedup ? "rgba(125,211,252,0.35)" : "rgba(255,255,255,0.08)" }} />
+              <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-300"
+                style={{ transform: dedup ? "translateX(16px)" : "translateX(0)", background: dedup ? "#7dd3fc" : "rgba(255,255,255,0.35)" }} />
+            </div>
+            <span className="font-orb text-[12px] text-sky-300/60 group-hover:text-sky-300/90 transition-colors">
+              {lang === "zh" ? "去除重复数据" : "Remove Duplicates"}
+            </span>
+          </label>
+        </div>
+      )}
       {chartData[idx] && (
         <div className="display-screen p-5 flex justify-between items-center">
           <div>
@@ -469,7 +571,7 @@ export default function GIApp() {
           </div>
         </div>
 
-        <div><ChartPanel chartData={chartData} color={color} idx={gaugeIdx} /></div>
+        <div><ChartPanel chartData={chartData} color={color} idx={gaugeIdx} activeMode={activeMode} /></div>
         <footer className="text-center pt-12 pb-4 text-[9px] text-white/8 font-orb">lunaris.moe · Genshin Impact &copy; HoYoverse</footer>
       </main>
     </div>

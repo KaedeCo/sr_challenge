@@ -94,6 +94,12 @@ def _scrape_tower(session, version):
             ename = item.get("enBuffName", "") if isinstance(item, dict) else ""
             name_zh = item.get("chsBuffName", "") if isinstance(item, dict) else ""
             group, levels, enemies = _parse_tower(detail, sid, ename, name_zh)
+            # Also fetch CHS version for Chinese text
+            try:
+                chs_detail = _fetch_json(TOWER_DETAIL_URL.format(version=version, id=sid).replace("/en/tower/", "/chs/tower/"))
+                _merge_chs_tower(group, levels, enemies, chs_detail)
+            except Exception:
+                pass  # CHS not available, use what we have
             _store(session, group, levels, enemies)
             count += 1
             total_hp = sum(lv["total_hp"] for lv in levels)
@@ -146,6 +152,7 @@ def _parse_tower(detail, schedule_id, ename="", name_zh=""):
 
     chambers = floor12.get("chambers", [])
     for ci, chamber in enumerate(chambers):
+        chamber_level = int(chamber.get("monsterLevel", 0))
         for half_key, stage_num in [("firstHalfMonsters", ci * 2 + 1), ("secondHalfMonsters", ci * 2 + 2)]:
             monsters = chamber.get(half_key, [])
             if not monsters:
@@ -161,7 +168,7 @@ def _parse_tower(detail, schedule_id, ename="", name_zh=""):
                     "monster_name": raw_name,
                     "monster_name_zh": "",
                     "monster_id": str(m.get("id", "")),
-                    "monster_level": m.get("level", m.get("monsterLevel", 0)),
+                    "monster_level": chamber_level,
                     "hp": hp_val,
                     "atk": 0,
                     "def": 0,
@@ -187,6 +194,38 @@ def _parse_tower(detail, schedule_id, ename="", name_zh=""):
             enemies.extend(half_enemies)
 
     return group, levels, enemies
+
+
+def _merge_chs_tower(group, levels, enemies, chs_detail):
+    """Fill Chinese text from CHS version of tower detail."""
+    # Buff text
+    chs_buff = chs_detail.get("monthlyBuff", {})
+    if chs_buff.get("name"):
+        group["blessing_name_zh"] = _clean_html(chs_buff.get("name", ""))
+    if chs_buff.get("desc"):
+        group["blessing_desc_zh"] = _clean_html(chs_buff.get("desc", ""))
+
+    # Monster names: walk same structure in CHS detail
+    chs_floors = chs_detail.get("floors", [])
+    chs_f12 = None
+    for f in chs_floors:
+        if f.get("floorIndex") == 12:
+            chs_f12 = f
+            break
+    if not chs_f12:
+        return
+
+    chs_chambers = chs_f12.get("chambers", [])
+    chs_names = []
+    for chamber in chs_chambers:
+        for hk in ["firstHalfMonsters", "secondHalfMonsters"]:
+            for m in chamber.get(hk, []):
+                chs_names.append(_clean_html(m.get("name", "")))
+
+    # Match by position to enemies list (tower enemies are stored in order)
+    for i, en in enumerate(enemies):
+        if i < len(chs_names) and chs_names[i]:
+            en["monster_name_zh"] = chs_names[i]
 
 
 # ── Leyline scraping ───────────────────────────────────
@@ -363,6 +402,25 @@ def _run_scraper_impl():
     # 3. Scrape Leyline
     print("\n=== Scraping Leyline (Stygian Onslaught) ===")
     _scrape_leyline(session)
+
+    # 4. Enrich tower data with Fandom Wiki spawn counts
+    print("\n=== Enriching Tower with Fandom Wiki ===")
+    try:
+        from gi_fandom_integration import enrich_with_fandom
+        updated = enrich_with_fandom()
+        print(f"[*] Fandom enrichment: {updated} enemies updated")
+    except Exception as e:
+        print(f"[!] Fandom enrichment failed: {e}")
+
+    # 5. Verify Leyline boss HP against GC
+    print("\n=== Verifying Leyline HP with GamesAndChill ===")
+    try:
+        from gi_fandom_integration import verify_leyline_hp, apply_gc_structured
+        verified = verify_leyline_hp()
+        structured = apply_gc_structured()
+        print(f"[*] Leyline verification: {verified} fixed, structured: {structured} fixed")
+    except Exception as e:
+        print(f"[!] Leyline verification failed: {e}")
 
     print("\n[*] GI scraping complete!")
     session.close()
