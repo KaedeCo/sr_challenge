@@ -215,14 +215,19 @@ function Gauge({ total, idx, onChange, color }: {
   );
 }
 
-// ── DPS Row (instead of change%) ──
-function DPSRow({ name, nameZh, hp, dps }: { name: string; nameZh: string; hp: number; dps: number }) {
+// ── Enemy Detail Row ──
+function EnemyDetailRow({ name, nameZh, level, hp, atk, def, dps }: {
+  name: string; nameZh: string; level: number; hp: number; atk: number; def: number; dps: number;
+}) {
   const { tr } = useI18n();
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 text-[14px] border-b border-white/[0.03]">
-      <span className="flex-1 min-w-0 truncate text-sky-200/75 text-[13px]">{tr(name, nameZh)}</span>
-      <span className="w-24 text-right text-amber-300/65 font-math text-[14px]">{fmt(hp)}</span>
-      <span className="w-28 text-right font-orb font-bold text-[17px] text-red-400" style={{ textShadow: "0 0 10px rgba(248,113,113,0.4)" }}>{fmt(dps)}</span>
+    <div className="flex items-center gap-2 px-4 py-1.5 text-[14px] border-b border-white/[0.03] last:border-0 hover:bg-white/[0.01]">
+      <span className="flex-1 min-w-0 truncate text-sky-200/85 text-[13px] font-orb">{tr(name, nameZh)}</span>
+      <span className="w-12 text-right text-amber-400 font-code text-[12px]" style={{ textShadow: "0 0 4px rgba(250,204,21,0.2)" }}>Lv.{level}</span>
+      <span className="w-24 text-right text-amber-300/70 font-math text-[14px]">{fmt(hp)}</span>
+      <span className="w-20 text-right text-white/15 font-code text-[12px]">{fmt(atk)}</span>
+      <span className="w-16 text-right text-white/15 font-code text-[12px]">{fmt(def)}</span>
+      <span className="w-24 text-right font-orb font-bold text-[17px] text-red-400" style={{ textShadow: "0 0 8px rgba(248,113,113,0.4)" }}>{fmt(dps)}</span>
     </div>
   );
 }
@@ -237,14 +242,25 @@ function NodeCard({ level }: { level: LevelDetail }) {
         <h4 className="font-orb font-semibold text-[17px]">{tr(level.name, level.name_zh)}</h4>
         <span className="font-math text-[14px] text-sky-300/55">HP {fmt(level.total_hp)}</span>
       </div>
-      {level.time_limit && <div className="font-orb text-[13px] text-white/20 mb-2">{t("minDPS")} = HP / {level.time_limit}s</div>}
+      <div className="font-orb text-[12px] text-white/15 mb-2">{t("minDPS")} = HP / {level.time_limit}s = <span className="text-red-400 font-bold">{fmt(level.total_hp / (level.time_limit || 90))}</span></div>
       <button onClick={() => setOn(!on)} className="font-orb text-[13px] text-sky-400/55 hover:text-sky-300">{on ? `▼ ${t("collapse")}` : `▶ ${level.enemies.length} ${t("enemies")}`}</button>
-      {on && <div className="mt-2">
-        <div className="flex items-center gap-2 px-3 py-1 text-[11px] font-orb text-white/15 border-b border-white/[0.04]">
-          <span className="flex-1">Monster</span><span className="w-24 text-right">HP</span><span className="w-28 text-right">{t("minDPS")}</span>
+      {on && (
+        <div className="mt-2">
+          <div className="flex items-center gap-2 px-4 py-1 text-[11px] font-orb text-white/15 border-b border-white/[0.05]">
+            <span className="flex-1">Monster</span>
+            <span className="w-12 text-right">Lv</span>
+            <span className="w-24 text-right">HP</span>
+            <span className="w-20 text-right">ATK</span>
+            <span className="w-16 text-right">DEF</span>
+            <span className="w-24 text-right">Min DPS</span>
+          </div>
+          {level.enemies.map((e, i) => (
+            <EnemyDetailRow key={i} name={e.name} nameZh={e.name_zh} level={e.level}
+              hp={e.hp} atk={e.atk} def={e.def}
+              dps={level.total_hp / (level.time_limit || 90)} />
+          ))}
         </div>
-        {level.enemies.map((e, i) => <DPSRow key={i} name={e.name} nameZh={e.name_zh} hp={e.hp} dps={level.min_dps} />)}
-      </div>}
+      )}
     </div>
   );
 }
@@ -339,6 +355,26 @@ function ChartPanel({ chartData, color, idx }: { chartData: ChartDataPoint[]; co
                 <td className="font-math font-bold text-amber-300/70 text-[15px]">{fmt(fit.preds[2].hp)}</td>
                 <td></td><td></td>
               </tr>
+              {fit.growthWindows.map((w, i) => {
+                const isPositive = w.avgPct > 0;
+                const col = isPositive ? "#f87171" : "#4ade80";
+                const glow = isPositive ? "rgba(248,113,113,0.4)" : "rgba(74,222,128,0.3)";
+                const fs = "1.4rem";
+                return (
+                  <tr key={i}>
+                    <td colSpan={4} className="text-center" style={i === 0 ? { borderTop: "1px solid rgba(125,211,252,0.08)" } : {}}>
+                      <div style={{ padding: "10px 0 2px", display: "flex", justifyContent: "center", alignItems: "baseline", gap: "18px", flexWrap: "wrap" }}>
+                        <span className="font-orb font-bold" style={{ fontSize: fs, letterSpacing: "0.06em", background: "linear-gradient(135deg, #7dd3fc, #c084fc)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>{w.label}</span>
+                        <span className="font-orb" style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.62rem", letterSpacing: "0.05em" }}>AVG</span>
+                        <span className="font-orb font-bold" style={{ fontSize: fs, color: col, textShadow: `0 0 12px ${glow}` }}>{isPositive ? "+" : ""}{w.avgPct.toFixed(2)}%</span>
+                        <span className="font-orb" style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.62rem", letterSpacing: "0.05em" }}>×2 IN</span>
+                        <span className="font-orb font-bold" style={{ fontSize: fs, color: col, textShadow: `0 0 12px ${glow}` }}>{isFinite(w.doubling) ? w.doubling.toFixed(1) : "∞"}</span>
+                        <span className="font-orb" style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.62rem", letterSpacing: "0.05em" }}>SEASONS</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
