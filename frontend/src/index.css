@@ -331,6 +331,7 @@ body::before {
 .level-cell { color: #fbbf24; font-family: 'Cascadia Code', 'Consolas', monospace !important; font-size: 0.76rem; text-shadow: 0 0 5px rgba(250,204,21,0.25); }
 .hp-cell { color: rgba(252,211,77,0.7); font-family: 'Cambria Math', serif !important; font-size: 0.84rem; }
 .stat-cell { color: rgba(255,255,255,0.15); font-family: 'Cascadia Code', 'Consolas', monospace !important; font-size: 0.76rem; }
+.change-cell { font-family: 'Orbitron', sans-serif !important; font-weight: 700 !important; font-size: 1.05rem !important; }
 
 /* ── Expanded cell ── */
 .monster-cell-expanded {

@@ -373,8 +373,8 @@ function EnemyRow({ name, level, hp, spd, tough, effRes, qty, changePct, gridCol
     <span key={3} className="monster-cell stat-cell" onClick={() => onCellClick(3)}>{spd}</span>,
     <span key={4} className="monster-cell stat-cell" onClick={() => onCellClick(4)}>{tough}</span>,
     <span key={5} className="monster-cell stat-cell" onClick={() => onCellClick(5)}>{Math.round(effRes * 100)}%</span>,
-    <span key={6} className={`monster-cell ${expandedCol === 6 ? "monster-cell-expanded" : ""}`}
-      style={changePct !== null ? { color: changePct > 0 ? "#f87171" : "#4ade80", textShadow: `0 0 8px ${changePct > 0 ? "rgba(248,113,113,0.4)" : "rgba(74,222,128,0.3)"}` } : {}}
+    <span key={6} className={`monster-cell change-cell font-orb font-bold text-[18px] ${expandedCol === 6 ? "monster-cell-expanded" : ""}`}
+      style={changePct !== null ? { color: changePct > 0 ? "#f87171" : "#4ade80", textShadow: `0 0 8px ${changePct > 0 ? "rgba(248,113,113,0.4)" : "rgba(74,222,128,0.3)"}` } : { color: "rgba(255,255,255,0.1)" }}
       onClick={() => onCellClick(6)}>
       {changePct !== null ? (changePct >= 0 ? "+" : "") + changePct.toFixed(1) + "%" : "—"}
     </span>,
