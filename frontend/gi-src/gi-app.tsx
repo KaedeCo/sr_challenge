@@ -215,6 +215,258 @@ function Gauge({ total, idx, onChange, color }: {
   );
 }
 
+// ── How It Works Modal ──
+function HowItWorks({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [curves, setCurves] = useState<any>(null);
+  const [tab, setTab] = useState<"hp" | "atk" | "def">("hp");
+  const { lang, t } = useI18n();
+
+  useEffect(() => {
+    if (open && !curves) {
+      fetch("/sr/gi-challenge/curves.json")
+        .then(r => r.json())
+        .then(setCurves);
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  const curveColors = ["#7dd3fc", "#c084fc", "#fbbf24"];
+
+  const chartData: any[] = [];
+  if (curves) {
+    const maxLen = Math.max(
+      ...Object.values(curves).map((c: any) => c.points.length)
+    );
+    for (let i = 0; i < maxLen; i++) {
+      const pt: any = { lv: i + 1 };
+      Object.entries(curves).forEach(([key, curve]: [string, any]) => {
+        const name = curve.name || key;
+        if (i < curve.points.length) {
+          pt[`${name}_${tab}`] = curve.points[i][tab];
+        }
+      });
+      chartData.push(pt);
+    }
+  }
+
+  const isZh = lang === "zh";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div className="relative glass-card w-full max-w-[860px] max-h-[88vh] overflow-y-auto p-10" onClick={e => e.stopPropagation()}>
+        {/* Close button - always visible */}
+        <button onClick={onClose}
+          className="absolute top-5 right-5 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/80 font-orb text-lg flex items-center justify-center transition-all z-10"
+          title={isZh ? "关闭" : "Close"}>
+          ✕
+        </button>
+
+        {/* ===== Title ===== */}
+        <h2 className="font-orb text-[28px] font-bold text-center mb-1" style={{
+          background: "linear-gradient(135deg, #7dd3fc, #c084fc)",
+          WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent",
+          textShadow: "0 0 30px rgba(125,211,252,0.2)",
+        }}>
+          {isZh ? "计算说明" : "How does it count?"}
+        </h2>
+        <p className="text-center text-white/25 text-[13px] font-orb mb-10">
+          {isZh ? "深渊怪物 HP / ATK / DEF 计算公式全解" : "Spiral Abyss HP / ATK / DEF formula explained"}
+        </p>
+
+        {/* ===== Section 1: Three Factors ===== */}
+        <div className="mb-10">
+          <h3 className="font-orb text-[16px] text-sky-300/70 mb-4 text-center">
+            {isZh ? "怪物属性由三个因素共同决定" : "Enemy stats are determined by three factors"}
+          </h3>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <div className="flex flex-col items-center gap-2 px-6 py-4 rounded-xl bg-sky-500/8 border border-sky-500/15" style={{ minWidth: "200px" }}>
+              <span className="font-orb text-[20px] font-bold text-sky-300">①</span>
+              <span className="font-orb text-[14px] text-sky-200/80 text-center">
+                {isZh ? "成长曲线" : "Growth Curve"}
+              </span>
+              <span className="text-[11px] text-sky-300/40 text-center">
+                {isZh ? "按等级查表，3种类型" : "Lookup by level, 3 types"}
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-2 px-6 py-4 rounded-xl bg-purple-500/8 border border-purple-500/15" style={{ minWidth: "200px" }}>
+              <span className="font-orb text-[20px] font-bold text-purple-300">②</span>
+              <span className="font-orb text-[14px] text-purple-200/80 text-center">
+                {isZh ? "怪物基础倍率" : "Enemy Base Multiplier"}
+              </span>
+              <span className="text-[11px] text-purple-300/40 text-center">
+                {isZh ? "每个怪物独有" : "Unique per monster"}
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-2 px-6 py-4 rounded-xl bg-amber-500/8 border border-amber-500/15" style={{ minWidth: "200px" }}>
+              <span className="font-orb text-[20px] font-bold text-amber-300">③</span>
+              <span className="font-orb text-[14px] text-amber-200/80 text-center">
+                {isZh ? "深渊血量系数" : "Abyss HP Coefficient"}
+              </span>
+              <span className="text-[11px] text-amber-300/40 text-center">
+                {isZh ? "随版本变化" : "Changes per version"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== Section 2: Formula ===== */}
+        <div className="mb-10">
+          <h3 className="font-orb text-[16px] text-sky-300/70 mb-5 text-center">
+            {isZh ? "计算公式" : "Formula"}
+          </h3>
+          <div className="bg-white/[0.03] rounded-2xl p-8 space-y-5">
+            {/* HP formula */}
+            <div className="font-orb text-[18px] text-center leading-loose tracking-wide">
+              <span style={{ color: "#fbbf24", fontWeight: 700 }}>HP</span>
+              <span className="text-white/30 mx-3">=</span>
+              <span style={{ color: "#7dd3fc" }}>
+                {isZh ? "成长曲线[等级][曲线类型]" : "GrowthCurve[Lv][Type]"}
+              </span>
+              <span className="text-white/30 mx-3">×</span>
+              <span style={{ color: "#c084fc" }}>
+                {isZh ? "怪物基础HP" : "EnemyBaseHP"}
+              </span>
+              <span className="text-white/30 mx-3">×</span>
+              <span style={{ color: "#f59e0b" }}>
+                {isZh ? "深渊系数" : "AbyssCoeff"}
+              </span>
+            </div>
+            {/* ATK formula */}
+            <div className="font-orb text-[16px] text-center leading-loose tracking-wide">
+              <span style={{ color: "#fbbf24", fontWeight: 700 }}>ATK</span>
+              <span className="text-white/30 mx-3">=</span>
+              <span style={{ color: "#7dd3fc" }}>GrowthCurve[Lv][Type]</span>
+              <span className="text-white/30 mx-3">×</span>
+              <span style={{ color: "#c084fc" }}>EnemyBaseATK</span>
+            </div>
+            {/* DEF formula */}
+            <div className="font-orb text-[16px] text-center leading-loose tracking-wide">
+              <span style={{ color: "#fbbf24", fontWeight: 700 }}>DEF</span>
+              <span className="text-white/30 mx-3">=</span>
+              <span style={{ color: "#7dd3fc" }}>GrowthCurve[Lv][Type]</span>
+              <span className="text-white/30 mx-2 text-[12px]">
+                ({isZh ? "DEF 不受倍率影响" : "DEF not affected by multiplier"})
+              </span>
+            </div>
+            {/* Abyss coefficient timeline */}
+            <div className="pt-4 border-t border-white/5">
+              <p className="text-white/30 text-[12px] font-orb text-center mb-2">
+                {isZh ? "深渊血量系数时间线" : "Abyss HP Coefficient Timeline"}
+              </p>
+              <div className="flex justify-center gap-6 font-orb text-[12px]">
+                <span className="text-white/40">1.0 ~ 4.8: <span className="text-amber-300/70">2.5×</span></span>
+                <span className="text-white/40">5.0: <span className="text-amber-300/70">3.0×</span></span>
+                <span className="text-white/40">5.1+: <span className="text-amber-300/70">3.75×</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== Section 3: Curve Chart ===== */}
+        <div className="mb-10">
+          <h3 className="font-orb text-[16px] text-sky-300/70 mb-5 text-center">
+            {isZh ? "成长曲线图表" : "Growth Curve Chart"}
+          </h3>
+          {/* Tab switcher */}
+          <div className="flex justify-center gap-3 mb-5">
+            {(["hp","atk","def"] as const).map(tb => (
+              <button key={tb}
+                onClick={() => setTab(tb)}
+                className={`font-orb text-[13px] px-5 py-2 rounded-full transition-all duration-300 ${
+                  tab === tb
+                    ? "bg-white/10 text-white border border-white/20"
+                    : "text-white/25 hover:text-white/50 border border-transparent"
+                }`}>
+                {tb.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          {/* Chart */}
+          {curves && (
+            <div className="bg-white/[0.02] rounded-xl p-6">
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                  <XAxis dataKey="lv" stroke="rgba(255,255,255,0.2)" tick={{ fontSize: 11, fontFamily: 'Orbitron' }}
+                    label={{ value: isZh ? "等级" : "Level", position: 'insideBottom', offset: -10, fill: 'rgba(255,255,255,0.3)', fontSize: 12 }} />
+                  <YAxis stroke="rgba(255,255,255,0.2)" tick={{ fontSize: 11, fontFamily: 'Orbitron' }}
+                    tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}K` : v.toString()} />
+                  <Tooltip contentStyle={{ background: 'rgba(8,8,22,0.95)', border: '1px solid rgba(125,211,252,0.2)', borderRadius: 8 }}
+                    labelFormatter={lv => `${isZh ? "等级" : "Level"} ${lv}`}
+                    formatter={(v: any) => [Number(v).toLocaleString(), '']} />
+                  <Legend wrapperStyle={{ fontSize: 12, fontFamily: 'Orbitron', paddingTop: 10 }} />
+                  {Object.entries(curves).map(([key, curve]: [string, any], i) => (
+                    <Line key={key} type="monotone" dataKey={`${curve.name}_${tab}`}
+                      name={curve.name} stroke={curveColors[i]} strokeWidth={2.5}
+                      dot={false} />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+              {/* Legend explanation */}
+              <div className="flex justify-center gap-6 mt-4 font-orb text-[11px]">
+                {curveColors.map((c, i) => (
+                  <span key={i} className="flex items-center gap-2 text-white/30">
+                    <span style={{ display: "inline-block", width: 12, height: 3, background: c, borderRadius: 2 }} />
+                    {["Common Enemy", "Elite Enemy", "Boss"][i]}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== Section 4: Worked Example ===== */}
+        <div>
+          <h3 className="font-orb text-[16px] text-sky-300/70 mb-5 text-center">
+            {isZh ? "计算示例" : "Worked Example"}
+          </h3>
+          <div className="bg-white/[0.03] rounded-2xl p-8">
+            <p className="text-white/50 text-[14px] font-orb text-center mb-5">
+              {isZh
+                ? "坚盾重甲蟹 · HP 倍率 1.3 · 曲线 2 · 等级 98 · 深渊系数 3.75×"
+                : "Sternshield Crab · HP multiplier 1.3 · Curve 2 · Level 98 · Abyss 3.75×"}
+            </p>
+            {/* Step-by-step with colors */}
+            <div className="font-orb text-[20px] text-center leading-loose tracking-wide">
+              <span style={{ color: "#fbbf24", fontWeight: 700 }}>HP</span>
+              <span className="text-white/30 mx-2">=</span>
+              <span style={{ color: "#7dd3fc" }}>103,001</span>
+              <span className="text-white/30 mx-2">×</span>
+              <span style={{ color: "#c084fc" }}>1.3</span>
+              <span className="text-white/30 mx-2">×</span>
+              <span style={{ color: "#f59e0b" }}>3.75</span>
+              <span className="text-white/30 mx-2">=</span>
+              <span style={{ color: "#4ade80", fontWeight: 700 }}>502,131</span>
+            </div>
+            {/* Color legend for the example */}
+            <div className="flex justify-center gap-6 mt-6 font-orb text-[11px]">
+              <span className="flex items-center gap-2 text-white/30">
+                <span style={{ color: "#7dd3fc" }}>●</span>
+                {isZh ? "成长曲线值" : "Growth Curve"}
+              </span>
+              <span className="flex items-center gap-2 text-white/30">
+                <span style={{ color: "#c084fc" }}>●</span>
+                {isZh ? "怪物倍率" : "Enemy Base"}
+              </span>
+              <span className="flex items-center gap-2 text-white/30">
+                <span style={{ color: "#f59e0b" }}>●</span>
+                {isZh ? "深渊系数" : "Abyss Coeff"}
+              </span>
+              <span className="flex items-center gap-2 text-white/30">
+                <span style={{ color: "#4ade80" }}>●</span>
+                {isZh ? "最终血量" : "Final HP"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // ── GI Monster Columns ──
 const GI_MONSTER_COLS = [
   { idx: 0, key: "name", label: "Monster", zhLabel: "怪物" },
@@ -494,6 +746,7 @@ export default function GIApp() {
   const [gaugeIdx, setGaugeIdx] = useState(0);
   const [detail, setDetail] = useState<SeasonDetail | null>(null);
   const [lang, setLang] = useState<Lang>(() => (localStorage.getItem("gi-lang") as Lang) || "zh");
+  const [howsOpen, setHowsOpen] = useState(false);
   const color = MODE_COLORS[activeMode] || "#7dd3fc";
 
   const tr = useCallback((en: string, zh: string) => lang === "zh" ? (zh || en) : en, [lang]);
@@ -528,7 +781,8 @@ export default function GIApp() {
       <Sidebar modes={modes} active={activeMode} onMode={setActiveMode} seasons={seasons} selIdx={gaugeIdx} onSeason={loadSeason} color={color} />
       <main className="main-content">
         <div style={{ position: "fixed", top: "20px", right: "24px", zIndex: 100, display: "flex", gap: "8px" }}>
-          <a href="/sr/sr-challenge/" className="lang-toggle font-orb" style={{ textDecoration: "none", right: "auto", position: "static" }}
+          <button onClick={() => setHowsOpen(true)} className="how-btn font-orb">{lang === "zh" ? "计算说明" : "How it works"}</button>
+        <a href="/sr/sr-challenge/" className="lang-toggle font-orb" style={{ textDecoration: "none", right: "auto", position: "static" }}
              title={lang==="zh"?"切换到星铁":"Switch to SR"}>
             {lang==="zh"?"星铁":"SR"}
           </a>
@@ -537,6 +791,7 @@ export default function GIApp() {
         <header className="text-center pt-10 pb-6">
           <h1 className="sidebar-title" style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)" }}>{t("modeTitle")}</h1>
           <p className="font-mono mt-2 text-[clamp(0.65rem,1.2vw,0.8rem)] text-white/25 italic">From the Moon to Teyvat</p>
+
         </header>
 
         <div className="flex flex-col lg:flex-row gap-6 mb-10">
@@ -544,12 +799,15 @@ export default function GIApp() {
             <Gauge total={seasons.length} idx={gaugeIdx} onChange={loadSeason} color={color} />
             {detail && (
               <div className="mt-4 glass-card p-6 flex flex-col justify-center min-h-[120px]">
-                <div className="flex items-center gap-3 flex-wrap mb-3">
-                  <h3 className="font-orb font-bold text-xl">{tr(detail.name, detail.name_zh)}</h3>
-                </div>
-                <div className="flex gap-3 mt-1 flex-wrap mb-4">
-                  <span className="font-code text-[13px] text-white/35 bg-white/[0.04] px-3 py-1.5 rounded font-math">HP {fmt(detail.total_hp_all)}</span>
-                  <span className="font-code text-[13px] text-white/35 bg-white/[0.04] px-3 py-1.5 rounded">{detail.levels.length} {t("nodes")}</span>
+                <div className="flex flex-col items-center gap-2 mb-4">
+                  <h3 className="font-orb font-bold text-xl text-center" style={{
+                    background: "linear-gradient(135deg, #4ade80, #7dd3fc)",
+                    WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent",
+                  }}>{tr(detail.name, detail.name_zh)}</h3>
+                  <div className="font-orb text-[30px] font-bold tracking-wider text-center" style={{
+                    background: "linear-gradient(135deg, #4ade80, #7dd3fc)",
+                    WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent",
+                  }}>{fmtFull(detail.total_hp_all)} HP · {detail.levels.length} {t("nodes")}</div>
                 </div>
                 {detail.blessing_desc && (
                   <div className="mt-auto p-4 rounded-lg bg-white/[0.03] border border-white/[0.04] font-orb text-center tracking-wide">
@@ -572,6 +830,7 @@ export default function GIApp() {
         </div>
 
         <div><ChartPanel chartData={chartData} color={color} idx={gaugeIdx} activeMode={activeMode} /></div>
+        <HowItWorks open={howsOpen} onClose={() => setHowsOpen(false)} />
         <footer className="text-center pt-12 pb-4 text-[9px] text-white/8 font-orb">lunaris.moe · Genshin Impact &copy; HoYoverse</footer>
       </main>
     </div>

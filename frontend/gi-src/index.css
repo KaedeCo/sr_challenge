@@ -386,6 +386,34 @@ body::before {
   transform: translateY(-1px);
 }
 
+/* ── How it works button (parallelogram + flowing glow) ── */
+.how-btn {
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  font-family: 'Orbitron', sans-serif !important;
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  padding: 10px 22px;
+  cursor: pointer;
+  border: none;
+  position: relative;
+  color: #7dd3fc;
+  background: linear-gradient(135deg, rgba(125,211,252,0.18), rgba(192,132,252,0.18), rgba(125,211,252,0.18));
+  background-size: 200% 200%;
+  animation: howFlow 3s ease infinite;
+  box-shadow: 0 0 20px rgba(125,211,252,0.2), inset 0 0 20px rgba(125,211,252,0.05);
+  transition: all 0.3s ease;
+}
+.how-btn:hover {
+  color: #e0f2fe;
+  box-shadow: 0 0 30px rgba(125,211,252,0.35), 0 0 60px rgba(192,132,252,0.15), inset 0 0 20px rgba(125,211,252,0.1);
+  transform: translateY(-1px);
+}
+@keyframes howFlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 /* ── Monster Grid Table (SR style) ── */
 .monster-header {
   display: grid;
