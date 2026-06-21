@@ -327,22 +327,62 @@ function Gauge({ total, idx, onChange, color }: {
   );
 }
 
+// ── Text visual width estimator ──
+function textVisualWidth(text: string): number {
+  let w = 0;
+  for (const c of text) {
+    const code = c.charCodeAt(0);
+    if ((code >= 0x4E00 && code <= 0x9FFF) || (code >= 0x3000 && code <= 0x303F) || (code >= 0xFF00 && code <= 0xFFEF)) w += 2;
+    else w += 1;
+  }
+  return w;
+}
+
+// ── Column definitions ──
+const MONSTER_COLS = [
+  { idx: 0, key: "name", label: "Monster", zhLabel: "怪物" },
+  { idx: 1, key: "level", label: "Lv", zhLabel: "等级" },
+  { idx: 2, key: "hp", label: "HP", zhLabel: "血量" },
+  { idx: 3, key: "spd", label: "SPD", zhLabel: "速度" },
+  { idx: 4, key: "tough", label: "TGH", zhLabel: "韧性" },
+  { idx: 5, key: "effRes", label: "E-RES", zhLabel: "效果抵抗" },
+  { idx: 6, key: "change", label: "Δ HP", zhLabel: "血量变化" },
+];
+
+function defaultColFractions(): number[] {
+  return [3.0, 0.7, 1.3, 0.7, 0.7, 0.8, 1.2];
+}
+
+function expandedColFractions(expIdx: number): number[] {
+  const base = defaultColFractions();
+  for (let i = 0; i < base.length; i++) {
+    base[i] = i === expIdx ? base[i] * 2.8 : base[i] * 0.45;
+  }
+  return base;
+}
+
 // ── Enemy Row ──
-function EnemyRow({ name, level, hp, spd, tough, effRes, qty, changePct }: {
+function EnemyRow({ name, level, hp, spd, tough, effRes, qty, changePct, gridCols, expandedCol, onCellClick }: {
   name: string; level: number; hp: number; spd: number; tough: number; effRes: number; qty: number; changePct: number | null;
+  gridCols: string; expandedCol: number | null; onCellClick: (colIdx: number) => void;
 }) {
+  const cells = [
+    <span key={0} className={`monster-cell name-cell ${expandedCol === 0 ? "monster-cell-expanded" : "truncate"}`} onClick={() => onCellClick(0)}>{name}</span>,
+    <span key={1} className="monster-cell level-cell" onClick={() => onCellClick(1)}>Lv.{level}</span>,
+    <span key={2} className="monster-cell hp-cell" onClick={() => onCellClick(2)}>{fmt(hp)}{qty > 1 ? ` x${qty}` : ""}</span>,
+    <span key={3} className="monster-cell stat-cell" onClick={() => onCellClick(3)}>{spd}</span>,
+    <span key={4} className="monster-cell stat-cell" onClick={() => onCellClick(4)}>{tough}</span>,
+    <span key={5} className="monster-cell stat-cell" onClick={() => onCellClick(5)}>{Math.round(effRes * 100)}%</span>,
+    <span key={6} className={`monster-cell ${expandedCol === 6 ? "monster-cell-expanded" : ""}`}
+      style={changePct !== null ? { color: changePct > 0 ? "#f87171" : "#4ade80", textShadow: `0 0 8px ${changePct > 0 ? "rgba(248,113,113,0.4)" : "rgba(74,222,128,0.3)"}` } : {}}
+      onClick={() => onCellClick(6)}>
+      {changePct !== null ? (changePct >= 0 ? "+" : "") + changePct.toFixed(1) + "%" : "—"}
+    </span>,
+  ];
+
   return (
-    <div className="enemy-row flex items-center gap-3 px-4 py-2 text-[15px] border-b border-white/[0.04] last:border-0">
-      <span className="flex-1 min-w-0 truncate text-sky-200/85 text-[14px]">{name}</span>
-      <span className="w-16 text-right text-amber-400 font-code text-[13px]" style={{ textShadow: "0 0 6px rgba(250,204,21,0.3)" }}>Lv.{level}</span>
-      <span className="w-36 text-right text-amber-300/75 font-math text-[15px]">{fmt(hp)}{qty > 1 ? ` x${qty}` : ""}</span>
-      <span className="w-20 text-right text-white/20 font-code text-[13px]">{spd}</span>
-      <span className="w-24 text-right text-white/20 font-code text-[13px]">{tough}</span>
-      <span className="w-20 text-right text-white/18 font-code text-[13px]">{Math.round(effRes * 100)}%</span>
-      <span className={`w-28 text-right font-orb font-bold text-[18px] ${changePct !== null && changePct > 0 ? "text-red-400" : changePct !== null ? "text-green-400/70" : "text-white/10"}`}
-        style={changePct !== null ? { textShadow: changePct > 0 ? "0 0 8px rgba(248,113,113,0.4)" : "0 0 8px rgba(74,222,128,0.3)" } : {}}>
-        {changePct !== null ? (changePct >= 0 ? "+" : "") + changePct.toFixed(1) + "%" : "—"}
-      </span>
+    <div className="monster-row" style={{ gridTemplateColumns: gridCols }}>
+      {cells}
     </div>
   );
 }
@@ -350,9 +390,30 @@ function EnemyRow({ name, level, hp, spd, tough, effRes, qty, changePct }: {
 // ── Node Card ──
 function NodeCard({ level, compare }: { level: LevelDetail; compare: ComparisonEntry[] }) {
   const [on, setOn] = useState(true);
-  const { t, tr } = useI18n();
+  const [expandedCol, setExpandedCol] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { lang, t, tr } = useI18n();
   const waves = new Map<number, typeof level.enemies>();
   level.enemies.forEach(e => { const l = waves.get(e.wave_num) || []; l.push(e); waves.set(e.wave_num, l); });
+
+  // Compute column fractions based on content
+  const allNames = level.enemies.map(e => tr(e.name, e.name_zh));
+  const maxNameWidth = Math.max(...allNames.map(textVisualWidth), 8);
+
+  // Adjust name column fraction based on actual content length, capped
+  const nameFrac = Math.min(4.5, Math.max(2.0, maxNameWidth / 8));
+  const baseFractions = [nameFrac, 0.7, 1.3, 0.7, 0.7, 0.8, 1.2];
+
+  const ef = expandedCol !== null ? expandedColFractions(expandedCol) : baseFractions;
+  const gridCols = ef.map(f => `${f}fr`).join(" ");
+
+  const handleCellClick = (colIdx: number) => {
+    setExpandedCol(prev => prev === colIdx ? null : colIdx);
+  };
+
+  // Reset expanded on collapse
+  useEffect(() => { if (!on) setExpandedCol(null); }, [on]);
+
   return (
     <div className={`glass-card p-5 ${level.is_starward ? "border-purple-500/15" : ""}`}>
       <div className="flex items-center justify-between mb-2">
@@ -363,12 +424,33 @@ function NodeCard({ level, compare }: { level: LevelDetail; compare: ComparisonE
         <span className="font-math text-[14px] text-sky-300/55">HP {fmt(level.total_hp)}</span>
       </div>
       <button onClick={() => setOn(!on)} className="font-orb text-[13px] text-sky-400/55 hover:text-sky-300">{on ? `▼ ${t("collapse")}` : `▶ ${level.enemies.length} ${t("enemies")}`}</button>
-      {on && <div className="mt-2">{Array.from(waves.entries()).sort(([a],[b])=>a-b).map(([wn,ens])=>(
-        <div key={wn} className="mb-2">
-          <div className="font-orb text-[12px] text-white/20 px-4 mb-1">{t("wave")} {wn}</div>
-          {ens.map((e,i)=>{const cmp=compare.find(c=>c.monster_name===e.name&&c.category===level.category);return <EnemyRow key={i} name={tr(e.name, e.name_zh)} level={e.level} hp={e.hp} spd={e.speed} tough={e.toughness} effRes={e.effect_res} qty={e.quantity} changePct={cmp?.hp_change_pct??null}/>;})}
+      {on && (
+        <div className="mt-2" ref={containerRef}>
+          {/* Column headers */}
+          <div className="monster-header" style={{ gridTemplateColumns: gridCols }}>
+            {MONSTER_COLS.map(c => (
+              <span key={c.idx} className={`monster-hcell ${expandedCol === c.idx ? "monster-hcell-active" : ""}`}
+                onClick={() => handleCellClick(c.idx)}
+                title={expandedCol === c.idx ? undefined : (lang === "zh" ? "点击展开" : "Click to expand")}>
+                {lang === "zh" ? (c.zhLabel || c.label) : c.label}
+              </span>
+            ))}
+          </div>
+          {/* Enemy rows grouped by wave */}
+          {Array.from(waves.entries()).sort(([a],[b])=>a-b).map(([wn,ens])=>(
+            <div key={wn} className="mb-2">
+              <div className="font-orb text-[12px] text-white/20 px-4 mb-1">{t("wave")} {wn}</div>
+              {ens.map((e,i)=>{
+                const cmp=compare.find(c=>c.monster_name===e.name&&c.category===level.category);
+                return <EnemyRow key={i} name={tr(e.name, e.name_zh)} level={e.level} hp={e.hp}
+                  spd={e.speed} tough={e.toughness} effRes={e.effect_res} qty={e.quantity}
+                  changePct={cmp?.hp_change_pct??null}
+                  gridCols={gridCols} expandedCol={expandedCol} onCellClick={handleCellClick} />;
+              })}
+            </div>
+          ))}
         </div>
-      ))}</div>}
+      )}
     </div>
   );
 }
