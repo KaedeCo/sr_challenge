@@ -718,16 +718,10 @@ export default function App() {
       <Sidebar modes={modes} active={activeMode} onMode={setActiveMode}
         seasons={seasons} selIdx={gaugeIdx} onSeason={loadSeason} color={color} />
       <main className="main-content">
-        {/* Top-right buttons */}
-        <div style={{ position: "fixed", top: "20px", right: "24px", zIndex: 100, display: "flex", gap: "8px" }}>
-          <a href="/sr/gi-challenge/" className="lang-toggle font-orb" style={{ textDecoration: "none", right: "auto", position: "static" }}
-             title={lang==="zh"?"切换到原神":"Switch to GI"}>
-            {lang==="zh"?"原神":"GI"}
-          </a>
-          <button onClick={toggleLang} className="lang-toggle font-orb" style={{ position: "static" }}>
-            {t("switchLang")}
-          </button>
-        </div>
+        {/* Language toggle */}
+        <button onClick={toggleLang} className="lang-toggle font-orb" title="Switch Language">
+          {t("switchLang")}
+        </button>
         {/* Title */}
         <header className="text-center pt-10 pb-6">
           <h1 className="sidebar-title" style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)" }}>

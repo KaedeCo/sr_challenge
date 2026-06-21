@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a2e"/>
+      <stop offset="100%" stop-color="#1a0a3e"/>
+    </linearGradient>
+    <linearGradient id="arr" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="50%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="20" fill="url(#bg)"/>
+  <!-- Chart line going up exponentially -->
+  <polyline points="15,75 30,70 45,60 60,45 75,25 88,8" fill="none" stroke="url(#arr)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Dots on the line -->
+  <circle cx="15" cy="75" r="2.5" fill="#22c55e"/>
+  <circle cx="45" cy="60" r="2.5" fill="#facc15"/>
+  <circle cx="75" cy="25" r="2.5" fill="#ef4444"/>
+  <!-- Arrow head -->
+  <polygon points="88,8 80,10 85,16" fill="#ef4444"/>
+  <!-- Sweat drop (stress about inflation) -->
+  <path d="M 82 28 Q 78 35 82 38 Q 86 35 82 28" fill="#38bdf8" opacity="0.7"/>
+  <!-- "HP↑↑" text in Orbitron style -->
+  <text x="22" y="92" font-family="monospace" font-size="11" font-weight="bold" fill="#7dd3fc" opacity="0.6">HP↑↑↑</text>
+</svg>
